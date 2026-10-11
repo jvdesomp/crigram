@@ -78,7 +78,11 @@
   .btn { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 16px; }
   .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
   .links { display: flex; gap: 16px; justify-content: center; margin: 22px 0 8px; flex-wrap: wrap; }
-  .link { background: none; border: 0; color: var(--blue); padding: 4px; font-size: 14px; }
+  .link { background: none; border: 0; color: var(--blue); padding: 4px; font-size: 14px; text-decoration: none; }
+  a.btn { display: inline-block; text-decoration: none; text-align: center; }
+  .feedback-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 18px; font-size: 14px; }
+  .feedback-card span { color: var(--muted); }
+  .feedback-card[hidden] { display: none; }
 
   /* play */
   .bar { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--card); border-bottom: 1px solid var(--line); }
@@ -155,15 +159,16 @@
       <p id="emptyText">No puzzles loaded yet.</p>
       <button class="btn primary" id="openFileBtn">Open puzzle file</button>
     </div>
+    <div class="feedback-card" id="feedbackCard" hidden>
+      <div><b>Enjoying CRIGram?</b><br><span>Tell us what you think, or sign up for news from CRIG.</span></div>
+      <a class="btn primary" id="feedbackLink" href="#" target="_blank" rel="noopener">Feedback &amp; CRIG news</a>
+    </div>
     <div class="links">
       <button class="link" id="statsBtn">Your stats</button>
       <button class="link" id="howBtn">How to play</button>
       <button class="link" id="installBtn" hidden>Install app</button>
-      <a class="link" id="feedbackLink" href="#" target="_blank" rel="noopener" hidden>Feedback &amp; CRIG news</a>
-    </div>
-    <div class="links" style="margin-top:0">
-      <button class="link" id="loadBtn">Load puzzle file</button>
-      <button class="link" id="resetBtn">Reset progress</button>
+      <!-- only for opening the game as a local file on a computer, when testing -->
+      <button class="link" id="loadBtn" hidden>Load puzzle file</button>
     </div>
     <input type="file" id="fileInput" accept=".json,application/json" hidden>
   </div>
@@ -214,6 +219,7 @@
     <div class="title"><b>Your stats</b><small>stored on this device only</small></div>
   </div>
   <div class="wrap" id="statsBody"></div>
+  <div class="wrap" style="padding-top:0;text-align:center"><button class="link" id="resetBtn" style="color:var(--muted)">Reset progress and stats</button></div>
 </section>
 <div class="sheet-bg" id="installBg">
   <div class="sheet">
@@ -675,6 +681,7 @@ async function init() {
 function pickFile() { $("fileInput").click(); }
 $("openFileBtn").onclick = pickFile;
 $("loadBtn").onclick = pickFile;
+$("loadBtn").hidden = /^https?:/.test(location.protocol);
 $("fileInput").onchange = e => {
   const f = e.target.files[0];
   if (!f) return;
@@ -688,7 +695,7 @@ $("fileInput").onchange = e => {
 };
 $("resetBtn").onclick = () => {
   if (!confirm("Reset all progress and your stats?")) return;
-  progress = {}; saveProgress(); stats = {}; saveStats(); renderHome();
+  progress = {}; saveProgress(); stats = {}; saveStats(); renderHome(); renderStats();
 };
 $("howBtn").onclick = () => $("howBg").classList.add("show");
 document.querySelectorAll(".sheet-bg").forEach(bg => bg.addEventListener("click", e => {
@@ -1185,22 +1192,29 @@ $("statsBack").onclick = () => { renderHome(); showScreen("home"); };
 // ---------- installing as an app ----------
 let installEvent = null;
 const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvent = e; });
-window.addEventListener("appinstalled", () => { $("installBtn").hidden = true; track("installed", "App installed"); });
-$("installBtn").hidden = isStandalone() || !/^https?:/.test(location.protocol);
+// shown on phones and tablets (touch screens), and on computers only when the browser offers installing
+function updateInstallLink() {
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  $("installBtn").hidden = isStandalone() || !/^https?:/.test(location.protocol) || !(installEvent || touch);
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvent = e; updateInstallLink(); });
+window.addEventListener("appinstalled", () => { installEvent = null; $("installBtn").hidden = true; track("installed", "App installed"); });
+updateInstallLink();
 $("installBtn").onclick = async () => {
   if (installEvent) {
     installEvent.prompt();
     try { await installEvent.userChoice; } catch (e) { /* ignore */ }
     installEvent = null;
+    updateInstallLink();
   } else {
     $("installBg").classList.add("show");
   }
 };
 if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {}));
 }
-if (CONFIG.feedbackUrl) { $("feedbackLink").href = CONFIG.feedbackUrl; $("feedbackLink").hidden = false; }
+if (CONFIG.feedbackUrl) { $("feedbackLink").href = CONFIG.feedbackUrl; $("feedbackCard").hidden = false; }
+$("feedbackLink").addEventListener("click", () => track("feedback", "Feedback form opened"));
 setupCounting();
 
 function relayout() { if (cur && $("play").classList.contains("active")) { sizeBoard(); drawBoard(); } }

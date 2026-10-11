@@ -2,7 +2,7 @@
 // Always tries the network first, so new puzzles and game updates show up right away,
 // and falls back to the last saved copy when there is no connection.
 // the cache name includes the folder, so a test copy in a subfolder keeps its own offline files
-const CACHE = self.registration.scope + "|crigram-v1";
+const CACHE = self.registration.scope + "|crigram-v2";
 const FILES = [
   "./",
   "./index.html",
@@ -30,8 +30,10 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const req = event.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
+  // "no-cache" makes the browser check with GitHub for a newer version instead of reusing
+  // a copy that GitHub allows to be kept for up to 10 minutes
   event.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then(res => {
         if (res.ok) {
           const copy = res.clone();

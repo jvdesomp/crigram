@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0079c1">
+<title>CRIGram</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CRIGram">
+<style>
+  :root {
+    --blue: #0079c1;
+    --blue-soft: #e1f0fa;
+    --ink: #1b2233;
+    --muted: #677086;
+    --line: #d5dbe6;
+    --bg: #f3f5f9;
+    --card: #ffffff;
+    --cell: #e4e8ef;
+    --crossed: #ffffff;
+    --clue-bg: #eef2f8;
+    --focus: rgba(30, 100, 200, .12);
+    --ok: #1f8a4c;
+    --bad: #d1343b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --blue: #3fa3e0;
+      --blue-soft: #16293a;
+      --ink: #e8ecf4;
+      --muted: #9aa3b5;
+      --line: #313a4c;
+      --bg: #12161f;
+      --card: #1a202c;
+      --cell: #2c3446;
+      --crossed: #0d1118;
+      --clue-bg: #1d2431;
+      --focus: rgba(91, 149, 234, .18);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body { font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg); overscroll-behavior: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .screen { display: none; min-height: 100%; }
+  .screen.active { display: flex; flex-direction: column; }
+  /* the play screen is pinned to the visible screen: top bar, grid, tool bar never scroll away */
+  #play.active { position: fixed; inset: 0; height: 100vh; height: 100dvh; overflow: hidden; -webkit-user-select: none; user-select: none; }
+  #play .bar, #play .tools { flex: none; }
+  body.playing { overflow: hidden; }
+  button { touch-action: manipulation; }
+
+  /* home */
+  .hero { background: var(--blue); color: #fff; padding: calc(28px + env(safe-area-inset-top)) 16px 22px; text-align: center; }
+  .hero { position: relative; }
+  .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(90deg, #13b5ea 0 16.66%, #73c167 0 33.33%, #fcb033 0 50%, #ef4035 0 66.66%, #f490af 0 83.33%, #a54499 0); }
+  .hero h1 { margin: 0; font-size: 34px; letter-spacing: .5px; font-weight: 800; }
+  .hero h1 span { font-weight: 400; opacity: .85; }
+  .hero p { margin: 4px 0 0; opacity: .9; font-size: 15px; }
+  .wrap { width: 100%; max-width: 720px; margin: 0 auto; padding: 16px; }
+  .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .pcard { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+  .pcard:active { transform: scale(.98); }
+  .pcard canvas, .pcard img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 6px; background: var(--clue-bg); display: block; image-rendering: pixelated; }
+  .pcard img { image-rendering: auto; }
+  .pcard b { font-size: 14px; line-height: 1.25; }
+  .pcard small { color: var(--muted); font-size: 12px; }
+  .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); margin-left: 4px; }
+  .tag.done { background: rgba(31,138,76,.14); color: var(--ok); }
+  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+  .btn { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 16px; }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .links { display: flex; gap: 16px; justify-content: center; margin: 22px 0 8px; flex-wrap: wrap; }
+  .link { background: none; border: 0; color: var(--blue); padding: 4px; font-size: 14px; }
+
+  /* play */
+  .bar { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--card); border-bottom: 1px solid var(--line); }
+  .bar .title { flex: 1; min-width: 0; }
+  .bar .title b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .title small { color: var(--muted); font-size: 12px; }
+  .icon { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; padding: 0; font-size: 18px; }
+  .icon svg { width: 20px; height: 20px; }
+  .icon[hidden] { display: none; }
+  .paper-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; text-decoration: none; }
+  #boardWrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 10px 8px; overflow: auto; }
+  #board { touch-action: none; display: block; }
+  .tools { display: flex; gap: 10px; justify-content: center; align-items: center; padding: 10px 12px calc(14px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); }
+  .mode { display: flex; background: var(--clue-bg); border-radius: 12px; padding: 4px; }
+  .mode button { border: 0; background: none; padding: 8px 18px; border-radius: 9px; display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 15px; color: var(--muted); }
+  .mode button.on { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+  .swatch { width: 16px; height: 16px; border-radius: 3px; display: inline-block; background: conic-gradient(#0079c1 0 14%, #13b5ea 0 28%, #73c167 0 43%, #fcb033 0 57%, #ef4035 0 71%, #f490af 0 86%, #a54499 0); }
+  .xmark { width: 16px; height: 16px; border-radius: 3px; display: inline-block; background: var(--crossed); border: 1.5px solid var(--muted); }
+
+  /* overlays */
+  .sheet-bg { position: fixed; inset: 0; background: rgba(10,15,25,.45); display: none; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet-bg.show { display: flex; }
+  .sheet { background: var(--card); width: 100%; max-width: 560px; max-height: 88vh; overflow: auto; border-radius: 18px 18px 0 0; padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); animation: up .35s ease; }
+  @media (min-width: 600px) { .sheet-bg { align-items: center; } .sheet { border-radius: 18px; } }
+  @keyframes up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sheet h2 { margin: 0 0 4px; font-size: 22px; }
+  .sheet .sub { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  .sheet img { width: 100%; border-radius: 10px; margin: 6px 0 10px; background: #fff; }
+  .cite { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+  .cite a { color: var(--blue); }
+  .sheet .actions { display: flex; gap: 10px; margin-top: 16px; }
+  .sheet .actions .btn { flex: 1; }
+  .rules li { margin-bottom: 6px; }
+
+  /* stats page */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: center; }
+  .tile b { display: block; font-size: 22px; line-height: 1.2; }
+  .tile small { color: var(--muted); font-size: 12px; }
+  .stats-list { list-style: none; padding: 0; margin: 18px 0 0; }
+  .stats-list li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line); font-size: 14px; }
+  .stats-list li span:last-child { color: var(--muted); text-align: right; white-space: nowrap; }
+  .stats-list li.open span:first-child { color: var(--muted); }
+  .section-title { font-size: 15px; margin: 22px 0 4px; }
+
+  /* result page */
+  .story { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+  .compare.single { grid-template-columns: minmax(0, 260px); justify-content: center; }
+  .compare figure { margin: 0; }
+  .compare img { display: block; width: 100%; max-height: 42vh; object-fit: contain; background: #fff; border-radius: 10px; border: 1px solid var(--line); }
+  .compare img.pix { image-rendering: pixelated; }
+  .compare figcaption { font-size: 12px; color: var(--muted); text-align: center; margin-top: 4px; }
+  .kicker { color: var(--muted); font-size: 13px; margin: 14px 0 0; }
+  .solved-chip { display: inline-flex; gap: 6px; align-items: center; margin: 14px 0 0; padding: 4px 10px; border-radius: 999px; background: rgba(31,138,76,.14); color: var(--ok); font-size: 13px; font-weight: 600; }
+  .story h2 { font-size: 24px; line-height: 1.2; margin: 4px 0 10px; }
+  .summary p { margin: 0 0 12px; font-size: 17px; line-height: 1.55; }
+  .story .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  #toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 10px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; max-width: 90vw; text-align: center; }
+  #toast.show { opacity: .95; }
+</style>
+</head>
+<body>
+
+<section id="home" class="screen active">
+  <div class="hero">
+    <h1>CRIG<span>ram</span></h1>
+    <p>cell by cell, decoding our science</p>
+  </div>
+  <div class="wrap">
+    <div id="list" class="grid-list"></div>
+    <div id="empty" class="empty" hidden>
+      <p>No puzzles loaded yet.</p>
+      <button class="btn primary" id="openFileBtn">Open puzzle file</button>
+    </div>
+    <div class="links">
+      <button class="link" id="statsBtn">Your stats</button>
+      <button class="link" id="howBtn">How to play</button>
+      <button class="link" id="installBtn" hidden>Install app</button>
+      <a class="link" id="feedbackLink" href="#" target="_blank" rel="noopener" hidden>Feedback &amp; CRIG news</a>
+    </div>
+    <div class="links" style="margin-top:0">
+      <button class="link" id="loadBtn">Load puzzle file</button>
+      <button class="link" id="resetBtn">Reset progress</button>
+    </div>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  </div>
+</section>
+
+<section id="play" class="screen">
+  <div class="bar">
+    <button class="icon" id="backBtn" aria-label="Back to puzzles">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="title"><b id="pTitle">Puzzle</b><small id="pMeta"></small></div>
+    <button class="icon" id="infoBtn" aria-label="About this figure" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
+    </button>
+    <button class="icon" id="undoBtn" aria-label="Undo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg>
+    </button>
+    <button class="icon" id="hintBtn" aria-label="Hint">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V16h8v-1.3A7 7 0 0012 2z"/></svg>
+    </button>
+    <button class="icon" id="restartBtn" aria-label="Restart">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg>
+    </button>
+  </div>
+  <div id="boardWrap"><canvas id="board"></canvas></div>
+  <div class="tools">
+    <div class="mode" role="group" aria-label="Tool">
+      <button id="modeFill" class="on"><span class="swatch"></span>Fill</button>
+      <button id="modeCross"><span class="xmark"></span>Blank</button>
+    </div>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <div class="bar">
+    <button class="icon" id="resultBack" aria-label="Back to puzzles">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="title"><b id="rTitle">Solved!</b><small id="rMeta"></small></div>
+  </div>
+  <article class="wrap story" id="story"></article>
+</section>
+<section id="stats" class="screen">
+  <div class="bar">
+    <button class="icon" id="statsBack" aria-label="Back to puzzles">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="title"><b>Your stats</b><small>stored on this device only</small></div>
+  </div>
+  <div class="wrap" id="statsBody"></div>
+</section>
+<div class="sheet-bg" id="installBg">
+  <div class="sheet">
+    <h2>Install CRIGram</h2>
+    <div class="sub">Put CRIGram on your home screen. It opens full screen and also works offline.</div>
+    <p><b>iPhone or iPad (Safari):</b> tap the Share button <span aria-hidden="true">⎋</span> at the bottom of the screen, then <b>Add to Home Screen</b>.</p>
+    <p><b>Android (Chrome):</b> tap the menu <b>⋮</b> at the top right, then <b>Install app</b> or <b>Add to Home screen</b>.</p>
+    <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+  </div>
+</div>
+<div class="sheet-bg" id="howBg">
+  <div class="sheet">
+    <h2>How to play</h2>
+    <div class="sub">Each puzzle hides part of a figure from a CRIG paper.</div>
+    <ul class="rules">
+      <li>The numbers next to each row and above each column tell you the lengths of the filled blocks in that line, in order.</li>
+      <li>Between two blocks there is at least one empty cell. A <b>0</b> means the line is empty.</li>
+      <li>Use <b>Fill</b> to colour cells and <b>Blank</b> to turn cells white when you know they stay empty. Grey cells are still undecided.</li>
+      <li>Drag along a row or column to mark several cells at once. Tap a marked cell again to clear it.</li>
+      <li>Every puzzle can be solved by logic alone. No guessing needed!</li>
+      <li>Stuck? The bulb gives you a hint.</li>
+    </ul>
+    <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
+    <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ---------- solver (same logic as the CRIGram maker) ----------
+function solveLine(cells, clue) {
+  const n = cells.length, k = clue.length, K = k + 1;
+  const z = new Int32Array(n + 1);
+  for (let i = 0; i < n; i++) z[i + 1] = z[i] + (cells[i] === 0 ? 1 : 0);
+  const fillable = (a, b) => z[b] - z[a] === 0;
+  const canEmpty = i => cells[i] !== 1;
+  const P = new Uint8Array((n + 1) * K);
+  P[0] = 1;
+  for (let i = 1; i <= n; i++) for (let j = 0; j <= k; j++) {
+    let v = canEmpty(i - 1) && P[(i - 1) * K + j];
+    if (!v && j > 0) {
+      const L = clue[j - 1], s = i - L;
+      if (s >= 0 && fillable(s, i)) v = s === 0 ? j === 1 : (canEmpty(s - 1) && P[(s - 1) * K + j - 1]);
+    }
+    P[i * K + j] = v ? 1 : 0;
+  }
+  if (!P[n * K + k]) return null;
+  const S = new Float64Array((n + 1) * K);
+  S[n * K + k] = 1;
+  for (let i = n - 1; i >= 0; i--) for (let j = k; j >= 0; j--) {
+    let c = canEmpty(i) ? S[(i + 1) * K + j] : 0;
+    if (j < k) {
+      const L = clue[j], e = i + L;
+      if (e <= n && fillable(i, e)) {
+        if (e === n) c += j === k - 1 ? 1 : 0;
+        else if (canEmpty(e)) c += S[(e + 1) * K + j + 1];
+      }
+    }
+    S[i * K + j] = c;
+  }
+  const can0 = new Uint8Array(n);
+  for (let x = 0; x < n; x++) {
+    if (!canEmpty(x)) continue;
+    for (let j = 0; j <= k; j++) if (P[x * K + j] && S[(x + 1) * K + j] > 0) { can0[x] = 1; break; }
+  }
+  const diff = new Int32Array(n + 1);
+  for (let j = 0; j < k; j++) {
+    const L = clue[j];
+    for (let s = 0; s + L <= n; s++) {
+      if (!fillable(s, s + L)) continue;
+      const left = s === 0 ? j === 0 : (canEmpty(s - 1) && P[(s - 1) * K + j] === 1);
+      if (!left) continue;
+      const right = s + L === n ? j === k - 1 : (canEmpty(s + L) && S[(s + L + 1) * K + j + 1] > 0);
+      if (right) { diff[s]++; diff[s + L]--; }
+    }
+  }
+  const res = new Int8Array(n);
+  let run = 0;
+  for (let x = 0; x < n; x++) {
+    run += diff[x];
+    const c1 = run > 0, c0 = can0[x] === 1;
+    if (!c0 && !c1) return null;
+    res[x] = c0 && c1 ? -1 : (c1 ? 1 : 0);
+  }
+  return { res, count: S[0] };
+}
+function lineClue(arr) {
+  const c = [];
+  let run = 0;
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i]) run++;
+    else if (run) { c.push(run); run = 0; }
+  }
+  if (run) c.push(run);
+  return c;
+}
+
+// full solve from the clues (published files carry no solution)
+function propagate(st, W, H, rows, cols) {
+  const dirty = new Uint8Array(W + H).fill(1);
+  let any = true;
+  while (any) {
+    any = false;
+    for (let idx = 0; idx < W + H; idx++) {
+      if (!dirty[idx]) continue;
+      dirty[idx] = 0;
+      const n = idx < H ? W : H, line = new Int8Array(n);
+      for (let x = 0; x < n; x++) line[x] = st[idx < H ? idx * W + x : x * W + idx - H];
+      const out = solveLine(line, idx < H ? rows[idx] : cols[idx - H]);
+      if (!out) return false;
+      for (let x = 0; x < n; x++) {
+        if (out.res[x] !== line[x]) {
+          st[idx < H ? idx * W + x : x * W + idx - H] = out.res[x];
+          dirty[idx < H ? H + x : x] = 1;
+          any = true;
+        }
+      }
+    }
+  }
+  return true;
+}
+function solveAll(W, H, rows, cols, limit) {
+  const sols = [];
+  let nodes = 0;
+  function rec(st) {
+    if (sols.length >= limit || ++nodes > 20000) return;
+    if (!propagate(st, W, H, rows, cols)) return;
+    const idx = st.indexOf(-1);
+    if (idx < 0) { sols.push(Uint8Array.from(st)); return; }
+    for (const v of [1, 0]) { const c = st.slice(); c[idx] = v; rec(c); if (sols.length >= limit) return; }
+  }
+  rec(new Int8Array(W * H).fill(-1));
+  return sols;
+}
+
+// ---------- scrambling the reveal (not encryption: it only stops casual peeking) ----------
+// The key is the solution itself, so the text and figure only become readable once the grid is solved.
+function fnv1a(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function keystream(seed, n) {
+  const out = new Uint8Array(n);
+  let a = seed >>> 0;
+  for (let i = 0; i < n; i++) {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    out[i] = ((t ^ (t >>> 14)) >>> 0) & 255;
+  }
+  return out;
+}
+function bytesToB64(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function b64ToBytes(b64) {
+  const s = atob(b64), a = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+  return a;
+}
+function solutionKey(rowsOf01, width) { return width + "|" + rowsOf01.join(""); }
+function scramble(text, key) {
+  const b = new TextEncoder().encode("CRIGRAM:" + text), k = keystream(fnv1a(key), b.length);
+  for (let i = 0; i < b.length; i++) b[i] ^= k[i];
+  return bytesToB64(b);
+}
+function unscramble(b64, key) {
+  try {
+    const b = b64ToBytes(b64), k = keystream(fnv1a(key), b.length);
+    for (let i = 0; i < b.length; i++) b[i] ^= k[i];
+    const t = new TextDecoder().decode(b);
+    return t.startsWith("CRIGRAM:") ? t.slice(8) : null;
+  } catch (e) { return null; }
+}
+
+// ---------- settings ----------
+// goatcounter: the code of a GoatCounter site (https://CODE.goatcounter.com), empty = no counting
+// feedbackUrl: a link to a feedback form (e.g. Microsoft Forms), empty = no link
+const CONFIG = {
+  goatcounter: "crigram",
+  feedbackUrl: "",
+};
+
+// ---------- storage ----------
+// a copy in a folder called "test" (or "...-test") is a test site: it keeps its own progress and stats
+// on the phone and is never counted, so testing does not mix with the live game
+const SITE_DIR = location.pathname.replace(/[^/]*$/, "");
+const IS_TEST = /(\/test|-test)\/$/.test(SITE_DIR);
+const KEY_SUFFIX = IS_TEST ? "@test" : "";
+const PUZZLES_KEY = "crigram.puzzles" + KEY_SUFFIX, PROGRESS_KEY = "crigram.progress" + KEY_SUFFIX;
+function readJSON(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
+function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch (e) { return false; } }
+
+const OLD_LABEL = { makkelijk: "easy", gemiddeld: "medium", moeilijk: "hard", "zeer moeilijk": "expert" };
+function validPuzzle(p) {
+  return p && Number.isInteger(p.width) && Number.isInteger(p.height) && Array.isArray(p.solution) &&
+    p.solution.length === p.height && p.solution.every(s => typeof s === "string" && s.length === p.width && /^[01]+$/.test(s));
+}
+const isClueList = (a, n) => Array.isArray(a) && a.length === n && a.every(c => Array.isArray(c) && c.every(v => Number.isInteger(v) && v > 0));
+function validPublished(p) {
+  return p && Number.isInteger(p.width) && Number.isInteger(p.height) && typeof p.secret === "string" && p.clues &&
+    isClueList(p.clues.rows, p.height) && isClueList(p.clues.cols, p.width);
+}
+// solves a published puzzle from its clues and unlocks the reveal with that solution
+function unlockPublished(p) {
+  const W = p.width, H = p.height, rows = p.clues.rows, cols = p.clues.cols;
+  const sols = solveAll(W, H, rows, cols, 20);
+  for (const sol of sols) {
+    const solution = Array.from({ length: H }, (_, r) => Array.from(sol.subarray(r * W, (r + 1) * W)).join(""));
+    const text = unscramble(p.secret, solutionKey(solution, W));
+    if (text != null) {
+      try { return { solution, ...JSON.parse(text) }; } catch (e) { /* try the next solution */ }
+    }
+  }
+  return null;
+}
+function preparePuzzles(data) {
+  const arr = Array.isArray(data) ? data : Array.isArray(data.puzzles) ? data.puzzles : [data];
+  return arr.map(p => {
+    if (!validPublished(p) || validPuzzle(p)) return p;
+    const r = unlockPublished(p);
+    if (!r) return null;
+    const { secret, ...rest } = p;
+    return { ...rest, ...r };
+  }).filter(validPuzzle).map((p, i) => {
+    const W = p.width, H = p.height;
+    const sol = new Uint8Array(W * H);
+    p.solution.forEach((s, r) => { for (let c = 0; c < W; c++) sol[r * W + c] = s[c] === "1" ? 1 : 0; });
+    const rows = [], cols = [];
+    for (let r = 0; r < H; r++) rows.push(lineClue(sol.subarray(r * W, (r + 1) * W)));
+    for (let c = 0; c < W; c++) { const col = []; for (let r = 0; r < H; r++) col.push(sol[r * W + c]); cols.push(lineClue(col)); }
+    const d = p.difficulty || null;
+    if (d && OLD_LABEL[d.label]) d.label = OLD_LABEL[d.label];
+    const q = { ...p, id: p.id || "puzzle-" + i, sol, rows, cols, difficulty: d, source: p.source || {} };
+    // colours saved by the maker: a palette plus one digit per cell
+    if (Array.isArray(p.palette) && p.palette.length && Array.isArray(p.colors) && p.colors.length === H &&
+        p.colors.every(s => typeof s === "string" && s.length === W && /^\d+$/.test(s))) {
+      q.cellColors = [];
+      p.colors.forEach(s => { for (let c = 0; c < W; c++) q.cellColors.push(p.palette[+s[c]] || CRIG_COLORS[0]); });
+    }
+    return q;
+  });
+}
+
+let puzzles = [];
+let progress = readJSON(PROGRESS_KEY, {});
+function saveProgress() { writeJSON(PROGRESS_KEY, progress); }
+// personal statistics: one record per solved puzzle, kept even when a puzzle is restarted
+const STATS_KEY = "crigram.stats" + KEY_SUFFIX;
+let stats = readJSON(STATS_KEY, {});
+function saveStats() { writeJSON(STATS_KEY, stats); }
+function dayKey(ts) { const d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+
+// ---------- anonymous counting (GoatCounter, only when configured) ----------
+const pendingEvents = [];
+function track(path, title) {
+  if (!CONFIG.goatcounter || IS_TEST) return;
+  const gc = window.goatcounter;
+  if (gc && gc.count) gc.count({ path, title: title || path, event: true });
+  else pendingEvents.push([path, title]);
+}
+function setupCounting() {
+  if (IS_TEST) {
+    document.querySelector(".hero h1").insertAdjacentHTML("afterend", '<p style="margin:6px 0 0;font-weight:700;letter-spacing:.5px">Test version</p>');
+    return;
+  }
+  if (!CONFIG.goatcounter || !/^https?:/.test(location.protocol)) return;
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = "https://gc.zgo.at/count.js";
+  s.dataset.goatcounter = `https://${CONFIG.goatcounter}.goatcounter.com/count`;
+  s.onload = () => { while (pendingEvents.length) track(...pendingEvents.shift()); };
+  document.head.appendChild(s);
+  $("privacyNote").hidden = false;
+}
+function timeBucket(sec) {
+  return sec < 60 ? "under-1-min" : sec < 120 ? "1-2-min" : sec < 300 ? "2-5-min" : sec < 600 ? "5-10-min" : sec < 1200 ? "10-20-min" : "over-20-min";
+}
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+function toast(msg, ms = 2200) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove("show"), ms);
+}
+function fmtTime(s) {
+  s = Math.floor(s);
+  const m = Math.floor(s / 60), r = s % 60;
+  return m + ":" + String(r).padStart(2, "0");
+}
+function stars(p) {
+  const n = p.difficulty && p.difficulty.stars ? p.difficulty.stars : 0;
+  return n ? "★".repeat(n) + "☆".repeat(4 - n) : "";
+}
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+// ---------- CRIG logo colours ----------
+const CRIG_COLORS = ["#0079c1", "#13b5ea", "#73c167", "#fcb033", "#ef4035", "#f490af", "#a54499"];
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+// a fixed "random" colour per cell, so colours do not change while playing
+function cellColor(p, i) {
+  if (p.cellColors) return p.cellColors[i];
+  let h = (hashStr(p.id) ^ Math.imul(i + 1, 2654435761)) >>> 0;
+  h ^= h >>> 15; h = Math.imul(h, 2246822519) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
+  return CRIG_COLORS[h % CRIG_COLORS.length];
+}
+
+// ---------- home ----------
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+  document.body.classList.toggle("playing", id === "play");
+  window.scrollTo(0, 0);
+}
+function thumbCanvas(p, prog) {
+  const c = document.createElement("canvas");
+  const cell = Math.max(2, Math.floor(120 / Math.max(p.width, p.height)));
+  c.width = p.width * cell; c.height = p.height * cell;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = css("--cell"); ctx.fillRect(0, 0, c.width, c.height);
+  const cells = prog && prog.cells;
+  for (let i = 0; i < p.width * p.height; i++) {
+    const v = prog && prog.solved ? p.sol[i] : (cells ? +cells[i] === 1 : 0);
+    ctx.fillStyle = cellColor(p, i);
+    if (v) ctx.fillRect((i % p.width) * cell, Math.floor(i / p.width) * cell, cell, cell);
+  }
+  ctx.strokeStyle = css("--line"); ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 0; x <= p.width; x++) { ctx.moveTo(x * cell + .5, 0); ctx.lineTo(x * cell + .5, c.height); }
+  for (let y = 0; y <= p.height; y++) { ctx.moveTo(0, y * cell + .5); ctx.lineTo(c.width, y * cell + .5); }
+  ctx.stroke();
+  return c;
+}
+function renderHome() {
+  const list = $("list");
+  list.innerHTML = "";
+  $("empty").hidden = puzzles.length > 0;
+  puzzles.forEach((p, i) => {
+    const prog = progress[p.id];
+    const b = document.createElement("button");
+    b.className = "pcard";
+    if (prog && prog.solved && p.image) {
+      const im = document.createElement("img");
+      im.src = p.image; im.alt = "";
+      b.appendChild(im);
+    } else {
+      b.appendChild(thumbCanvas(p, prog));
+    }
+    const name = prog && prog.solved ? p.title : "Puzzle " + (i + 1);
+    const status = prog && prog.solved
+      ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
+      : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "";
+    b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${stars(p)}${status}</small>`);
+    b.onclick = () => openPuzzle(i);
+    list.appendChild(b);
+  });
+}
+
+// ---------- loading ----------
+function setPuzzles(data, persist) {
+  const prepared = preparePuzzles(data);
+  if (!prepared.length) { toast("No puzzles found in this file."); return false; }
+  puzzles = prepared;
+  if (persist) {
+    const raw = puzzles.map(({ sol, rows, cols, ...rest }) => rest);
+    if (!writeJSON(PUZZLES_KEY, raw)) toast("Puzzles loaded, but too large to remember for next time.");
+  }
+  renderHome();
+  return true;
+}
+async function init() {
+  try {
+    const r = await fetch("crigram.json", { cache: "no-store" });
+    if (r.ok && setPuzzles(await r.json(), false)) return;
+  } catch (e) { /* opened as a local file: fall back to stored or picked puzzles */ }
+  const stored = readJSON(PUZZLES_KEY, null);
+  if (stored && stored.length) setPuzzles(stored, false);
+  else renderHome();
+}
+function pickFile() { $("fileInput").click(); }
+$("openFileBtn").onclick = pickFile;
+$("loadBtn").onclick = pickFile;
+$("fileInput").onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try { if (setPuzzles(JSON.parse(r.result), true)) toast(puzzles.length + " puzzles loaded."); }
+    catch (err) { toast("This is not a valid puzzle file."); }
+    e.target.value = "";
+  };
+  r.readAsText(f);
+};
+$("resetBtn").onclick = () => {
+  if (!confirm("Reset all progress and your stats?")) return;
+  progress = {}; saveProgress(); stats = {}; saveStats(); renderHome();
+};
+$("howBtn").onclick = () => $("howBg").classList.add("show");
+document.querySelectorAll(".sheet-bg").forEach(bg => bg.addEventListener("click", e => {
+  if (e.target === bg || e.target.hasAttribute("data-close")) bg.classList.remove("show");
+}));
+
+// ---------- play ----------
+let cur = null;          // current puzzle
+let curIndex = -1;
+let cells = null;        // Uint8Array: 0 empty, 1 filled, 2 crossed
+let undoStack = [];
+let mode = 1;            // 1 fill, 2 cross
+let elapsed = 0, startedAt = 0, timerId = 0;
+let solved = false;
+let layout = null;
+let focusCell = -1;
+let flash = null;        // { cells: Set, color, until }
+let revealAlpha = 0;
+let revealImg = null;
+
+function openPuzzle(i) {
+  cur = puzzles[i]; curIndex = i;
+  const prog = progress[cur.id] || {};
+  cells = new Uint8Array(cur.width * cur.height);
+  if (prog.cells && prog.cells.length === cells.length) for (let k = 0; k < cells.length; k++) cells[k] = +prog.cells[k];
+  solved = !!prog.solved;
+  elapsed = prog.time || 0;
+  startedAt = 0;
+  undoStack = [];
+  focusCell = -1; flash = null;
+  revealAlpha = solved ? 1 : 0;
+  revealImg = null;
+  if (cur.image) { revealImg = new Image(); revealImg.onload = drawBoard; revealImg.src = cur.image; }
+  if (solved) for (let k = 0; k < cells.length; k++) cells[k] = cur.sol[k] ? 1 : 2;
+  $("pTitle").textContent = solved ? cur.title : "Puzzle " + (i + 1);
+  $("infoBtn").hidden = !solved;
+  updateMeta();
+  setMode(1);
+  showScreen("play");
+  sizeBoard(); drawBoard();
+  if (solved) showWin(true);
+  else window.scrollTo(0, 0);
+  clearInterval(timerId);
+  timerId = setInterval(updateMeta, 1000);
+}
+function currentTime() { return elapsed + (startedAt ? (Date.now() - startedAt) / 1000 : 0); }
+function startTimer() { if (!startedAt && !solved) startedAt = Date.now(); }
+function pauseTimer() { if (startedAt) { elapsed = currentTime(); startedAt = 0; } }
+function updateMeta() {
+  if (!cur) return;
+  const d = cur.difficulty;
+  $("pMeta").textContent = `${cur.width} × ${cur.height}` + (d ? ` · ${d.label} ${stars(cur)}` : "") + ` · ${fmtTime(currentTime())}`;
+}
+function persist() {
+  if (!cur) return;
+  const prev = progress[cur.id] || {};
+  progress[cur.id] = { ...prev, cells: Array.from(cells).join(""), time: Math.round(currentTime()), solved };
+  saveProgress();
+}
+function leavePuzzle() {
+  pauseTimer(); persist();
+  clearInterval(timerId);
+  cur = null;
+  renderHome();
+  showScreen("home");
+}
+$("backBtn").onclick = leavePuzzle;
+document.addEventListener("visibilitychange", () => { if (document.hidden && cur) { pauseTimer(); persist(); } });
+
+function setMode(m) {
+  mode = m;
+  $("modeFill").classList.toggle("on", m === 1);
+  $("modeCross").classList.toggle("on", m === 2);
+}
+$("modeFill").onclick = () => setMode(1);
+$("modeCross").onclick = () => setMode(2);
+document.addEventListener("keydown", e => {
+  if (!cur) return;
+  if (e.key === "f" || e.key === "1") setMode(1);
+  if (e.key === "x" || e.key === "2") setMode(2);
+  if ((e.metaKey || e.ctrlKey) && e.key === "z") { e.preventDefault(); undo(); }
+});
+
+// layout and drawing
+const board = $("board");
+function sizeBoard() {
+  if (!cur) return;
+  const W = cur.width, H = cur.height;
+  const maxR = Math.max(1, ...cur.rows.map(c => c.length || 1));
+  const maxC = Math.max(1, ...cur.cols.map(c => c.length || 1));
+  const wrap = $("boardWrap");
+  const availW = wrap.clientWidth - 16, availH = wrap.clientHeight - 20;
+  const f = 0.72;
+  let cs = Math.floor(Math.min(availW / (W + maxR * f + 0.3), availH / (H + maxC * f + 0.3), 44));
+  cs = Math.max(cs, 13);
+  const slot = cs * f;
+  const left = Math.ceil(maxR * slot + cs * 0.3), top = Math.ceil(maxC * slot + cs * 0.3);
+  const tw = left + W * cs + 2, th = top + H * cs + 2;
+  const dpr = window.devicePixelRatio || 1;
+  board.style.width = tw + "px"; board.style.height = th + "px";
+  board.width = Math.round(tw * dpr); board.height = Math.round(th * dpr);
+  layout = { left, top, cs, slot, tw, th, dpr };
+}
+function lineDone(idx) {
+  const W = cur.width, H = cur.height, arr = [];
+  if (idx < H) for (let c = 0; c < W; c++) arr.push(cells[idx * W + c] === 1 ? 1 : 0);
+  else for (let r = 0; r < H; r++) arr.push(cells[r * W + idx - H] === 1 ? 1 : 0);
+  const want = idx < H ? cur.rows[idx] : cur.cols[idx - H];
+  const got = lineClue(arr);
+  return got.length === want.length && got.every((v, i) => v === want[i]);
+}
+function drawBoard() {
+  if (!cur || !layout) return;
+  const { left, top, cs, slot, tw, th, dpr } = layout;
+  const W = cur.width, H = cur.height;
+  const ctx = board.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, tw, th);
+  const C = { ink: css("--ink"), muted: css("--muted"), clue: css("--clue-bg"), cell: css("--cell"), crossed: css("--crossed"), line: css("--line"), focus: css("--focus"), blue: css("--blue") };
+
+  ctx.fillStyle = C.clue;
+  ctx.fillRect(0, top, left, H * cs);
+  ctx.fillRect(left, 0, W * cs, top);
+  const fr = focusCell >= 0 ? Math.floor(focusCell / W) : -1, fc = focusCell >= 0 ? focusCell % W : -1;
+  if (fr >= 0 && !solved) {
+    ctx.fillStyle = C.focus;
+    ctx.fillRect(0, top + fr * cs, left + W * cs, cs);
+    ctx.fillRect(left + fc * cs, 0, cs, top + H * cs);
+  }
+
+  const fs = Math.max(9, Math.round(cs * 0.5));
+  ctx.font = `600 ${fs}px -apple-system, BlinkMacSystemFont, sans-serif`;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  cur.rows.forEach((c, r) => {
+    const nums = c.length ? c : [0];
+    ctx.fillStyle = lineDone(r) ? C.muted : C.ink;
+    ctx.globalAlpha = lineDone(r) ? 0.45 : 1;
+    nums.forEach((n, t) => ctx.fillText(n, left - cs * 0.15 - (nums.length - t - 0.5) * slot, top + r * cs + cs / 2 + 1));
+  });
+  cur.cols.forEach((c, col) => {
+    const nums = c.length ? c : [0];
+    ctx.fillStyle = lineDone(H + col) ? C.muted : C.ink;
+    ctx.globalAlpha = lineDone(H + col) ? 0.45 : 1;
+    nums.forEach((n, t) => ctx.fillText(n, left + col * cs + cs / 2, top - cs * 0.15 - (nums.length - t - 0.5) * slot + 1));
+  });
+  ctx.globalAlpha = 1;
+
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+    const i = r * W + c, x = left + c * cs, y = top + r * cs, v = cells[i];
+    ctx.fillStyle = v === 1 ? cellColor(cur, i) : v === 2 ? C.crossed : C.cell;
+    ctx.fillRect(x, y, cs, cs);
+  }
+  if (flash && flash.until > performance.now()) {
+    ctx.strokeStyle = flash.color; ctx.lineWidth = 3;
+    flash.cells.forEach(i => ctx.strokeRect(left + (i % W) * cs + 1.5, top + Math.floor(i / W) * cs + 1.5, cs - 3, cs - 3));
+  }
+
+  ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let c = 0; c <= W; c++) { const x = left + c * cs + .5; ctx.moveTo(x, top); ctx.lineTo(x, top + H * cs); }
+  for (let r = 0; r <= H; r++) { const y = top + r * cs + .5; ctx.moveTo(left, y); ctx.lineTo(left + W * cs, y); }
+  ctx.stroke();
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let c = 0; c <= W; c += 5) { const x = left + c * cs + .5; ctx.moveTo(x, top); ctx.lineTo(x, top + H * cs); }
+  for (let r = 0; r <= H; r += 5) { const y = top + r * cs + .5; ctx.moveTo(left, y); ctx.lineTo(left + W * cs, y); }
+  ctx.moveTo(left + W * cs + .5, top); ctx.lineTo(left + W * cs + .5, top + H * cs);
+  ctx.moveTo(left, top + H * cs + .5); ctx.lineTo(left + W * cs, top + H * cs + .5);
+  ctx.stroke();
+
+  if (revealAlpha > 0 && revealImg && revealImg.complete && revealImg.naturalWidth) {
+    ctx.globalAlpha = revealAlpha;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(left, top, W * cs, H * cs);
+    ctx.drawImage(revealImg, left, top, W * cs, H * cs);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// input
+function cellAt(e) {
+  const r = board.getBoundingClientRect(), { left, top, cs } = layout;
+  const c = Math.floor((e.clientX - r.left - left) / cs), rr = Math.floor((e.clientY - r.top - top) / cs);
+  if (c < 0 || c >= cur.width || rr < 0 || rr >= cur.height) return null;
+  return { r: rr, c };
+}
+let stroke = null;
+board.addEventListener("pointerdown", e => {
+  if (!cur || solved) return;
+  const p = cellAt(e);
+  if (!p) return;
+  e.preventDefault();
+  board.setPointerCapture(e.pointerId);
+  const i = p.r * cur.width + p.c;
+  const target = mode;
+  const action = cells[i] === target ? 0 : target;
+  undoStack.push(cells.slice());
+  if (undoStack.length > 200) undoStack.shift();
+  stroke = { start: p, snap: cells.slice(), target, action, axis: null };
+  if (!elapsed && !startedAt && !cells.some(v => v)) track(`start/${cur.id}`, `Puzzle ${curIndex + 1} started`);
+  startTimer();
+  applyStroke(p);
+});
+board.addEventListener("pointermove", e => {
+  if (!stroke) return;
+  const p = cellAt(e);
+  if (!p) return;
+  applyStroke(p);
+});
+function applyStroke(p) {
+  const { start, snap, target, action } = stroke;
+  if (!stroke.axis && (p.r !== start.r || p.c !== start.c)) stroke.axis = Math.abs(p.r - start.r) > Math.abs(p.c - start.c) ? "col" : "row";
+  const end = stroke.axis === "col" ? { r: p.r, c: start.c } : stroke.axis === "row" ? { r: start.r, c: p.c } : start;
+  cells.set(snap);
+  const dr = Math.sign(end.r - start.r), dc = Math.sign(end.c - start.c);
+  const n = Math.max(Math.abs(end.r - start.r), Math.abs(end.c - start.c));
+  for (let k = 0; k <= n; k++) {
+    const i = (start.r + dr * k) * cur.width + start.c + dc * k;
+    const v = snap[i];
+    if (k === 0) cells[i] = action;
+    else if (action === 0 ? v === target : v === 0) cells[i] = action;
+  }
+  focusCell = end.r * cur.width + end.c;
+  drawBoard();   // draw right away, so a tapped cell shows immediately on phones
+}
+function endStroke() {
+  if (!stroke) return;
+  stroke = null;
+  drawBoard();
+  persist();
+  checkWin();
+}
+board.addEventListener("pointerup", endStroke);
+board.addEventListener("pointercancel", endStroke);
+
+function undo() {
+  if (!cur || solved || !undoStack.length) return;
+  cells = undoStack.pop();
+  persist(); drawBoard();
+}
+$("undoBtn").onclick = undo;
+$("infoBtn").onclick = () => { if (cur && solved) showWin(true); };
+$("restartBtn").onclick = () => {
+  if (!cur) return;
+  if (!confirm("Restart this puzzle?")) return;
+  cells.fill(0); undoStack = []; solved = false; elapsed = 0; startedAt = 0; revealAlpha = 0;
+  progress[cur.id] = { cells: Array.from(cells).join(""), time: 0, solved: false, hints: 0 };
+  saveProgress();
+  $("pTitle").textContent = "Puzzle " + (curIndex + 1);
+  $("infoBtn").hidden = true;
+  updateMeta(); drawBoard();
+};
+
+// hints
+function showFlash(set, color) {
+  flash = { cells: set, color, until: performance.now() + 1600 };
+  drawBoard();
+  setTimeout(drawBoard, 1650);
+}
+$("hintBtn").onclick = () => {
+  if (!cur || solved) return;
+  const W = cur.width, H = cur.height;
+  const wrong = [];
+  for (let i = 0; i < W * H; i++) {
+    if ((cells[i] === 1 && !cur.sol[i]) || (cells[i] === 2 && cur.sol[i])) wrong.push(i);
+  }
+  undoStack.push(cells.slice());
+  startTimer();
+  bumpHints();
+  if (wrong.length) {
+    const i = wrong[Math.floor(Math.random() * wrong.length)];
+    cells[i] = 0;
+    focusCell = i;
+    showFlash(new Set([i]), css("--bad"));
+    toast(wrong.length === 1 ? "This cell was wrong. It has been cleared." : `This cell was wrong (${wrong.length} mistakes in total). It has been cleared.`, 3000);
+    persist();
+    return;
+  }
+  // find the easiest line that yields a new cell, like a player would
+  const st = new Int8Array(W * H);
+  for (let i = 0; i < W * H; i++) st[i] = cells[i] === 1 ? 1 : cells[i] === 2 ? 0 : -1;
+  let best = null;
+  for (let idx = 0; idx < W + H; idx++) {
+    const n = idx < H ? W : H, line = new Int8Array(n), at = [];
+    for (let x = 0; x < n; x++) { const i = idx < H ? idx * W + x : x * W + idx - H; at.push(i); line[x] = st[i]; }
+    const out = solveLine(line, idx < H ? cur.rows[idx] : cur.cols[idx - H]);
+    if (!out) continue;
+    // crosses are not needed to win, so prefer lines that reveal a cell to fill
+    const fills = at.filter((i, x) => line[x] === -1 && out.res[x] === 1);
+    const gains = fills.length ? fills : at.filter((i, x) => line[x] === -1 && out.res[x] === 0);
+    if (!gains.length) continue;
+    const rank = (fills.length ? 0 : 1e12) + out.count;
+    if (!best || rank < best.rank) best = { rank, count: out.count, gains, at, row: idx < H };
+  }
+  let i;
+  if (best) {
+    i = best.gains[Math.floor(best.gains.length / 2)];
+    toast(`Look at this ${best.row ? "row" : "column"}.`);
+  } else {
+    const open = [];
+    for (let k = 0; k < W * H; k++) if (cells[k] === 0) open.push(k);
+    if (!open.length) return;
+    i = open[Math.floor(Math.random() * open.length)];
+  }
+  cells[i] = cur.sol[i] ? 1 : 2;
+  focusCell = i;
+  showFlash(new Set(best ? best.at : [i]), css("--blue"));
+  persist();
+  checkWin();
+};
+function recordSolve() {
+  const prog = progress[cur.id] || {}, time = prog.time || 0, hints = prog.hints || 0, now = Date.now();
+  const prev = stats[cur.id];
+  stats[cur.id] = prev
+    ? { ...prev, best: Math.min(prev.best, time), solves: (prev.solves || 1) + 1, last: now }
+    : { first: now, last: now, time, hints, best: time, solves: 1 };
+  saveStats();
+  const n = curIndex + 1;
+  track(`solved/${cur.id}`, `Puzzle ${n} solved`);
+  track(`solved/${cur.id}/time-${timeBucket(time)}`, `Puzzle ${n} solve time`);
+  track(`solved/${cur.id}/hints-${hints === 0 ? "0" : hints === 1 ? "1" : "2-or-more"}`, `Puzzle ${n} hints used`);
+}
+function bumpHints() {
+  const prev = progress[cur.id] || {};
+  progress[cur.id] = { ...prev, hints: (prev.hints || 0) + 1 };
+}
+
+// win
+function checkWin() {
+  if (solved) return;
+  for (let idx = 0; idx < cur.width + cur.height; idx++) if (!lineDone(idx)) return;
+  solved = true;
+  pauseTimer();
+  for (let k = 0; k < cells.length; k++) cells[k] = cells[k] === 1 ? 1 : 2;
+  persist();
+  recordSolve();
+  $("pTitle").textContent = cur.title;
+  $("infoBtn").hidden = false;
+  updateMeta();
+  focusCell = -1;
+  const t0 = performance.now();
+  const anim = now => {
+    const t = Math.min(1, (now - t0 - 500) / 1200);
+    revealAlpha = cur.image ? Math.max(0, t) : 0;
+    drawBoard();
+    if (t < 1 && cur === p) requestAnimationFrame(anim);
+  };
+  const p = cur;
+  drawBoard();
+  requestAnimationFrame(anim);
+  setTimeout(() => { if (cur === p) { revealAlpha = cur.image ? 1 : 0; drawBoard(); showWin(); } }, 2100);
+}
+function citation(s) {
+  const parts = [];
+  if (s.authors) parts.push(escapeHtml(s.authors) + (s.year ? ` (${escapeHtml(s.year)})` : ""));
+  else if (s.year) parts.push(escapeHtml(s.year));
+  if (s.article) parts.push(`<i>${escapeHtml(s.article)}</i>`);
+  if (s.journal) parts.push(escapeHtml(s.journal));
+  let html = parts.join(". ");
+  if (html) html += ".";
+  const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
+  if (doi) html += ` <a href="https://doi.org/${encodeURI(doi)}" target="_blank" rel="noopener">doi:${escapeHtml(doi)}</a>`;
+  else if (s.url && /^https?:\/\//i.test(s.url)) html += ` <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">link</a>`;
+  if (s.license && !/^(to be checked|onbekend)$/i.test(s.license)) html += `<br>Figure license: ${escapeHtml(s.license)}`;
+  return html;
+}
+function paperLink(s) {
+  const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
+  if (doi) return "https://doi.org/" + encodeURI(doi);
+  if (s.url && /^https?:\/\//i.test(s.url)) return s.url;
+  return "";
+}
+function paragraphs(text) {
+  return String(text || "").trim().split(/\n\s*\n/).filter(Boolean)
+    .map(p => `<p>${escapeHtml(p.trim()).replace(/\n/g, "<br>")}</p>`).join("");
+}
+// the solved puzzle as a picture: logo colours on white, with a faint grid
+function crigramImage(p) {
+  const cell = Math.max(8, Math.floor(480 / Math.max(p.width, p.height)));
+  const c = document.createElement("canvas");
+  c.width = p.width * cell; c.height = p.height * cell;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+  for (let i = 0; i < p.width * p.height; i++) {
+    if (!p.sol[i]) continue;
+    ctx.fillStyle = cellColor(p, i);
+    ctx.fillRect((i % p.width) * cell, Math.floor(i / p.width) * cell, cell, cell);
+  }
+  ctx.strokeStyle = "rgba(120,130,150,.25)"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let x = 1; x < p.width; x++) { ctx.moveTo(x * cell + .5, 0); ctx.lineTo(x * cell + .5, c.height); }
+  for (let y = 1; y < p.height; y++) { ctx.moveTo(0, y * cell + .5); ctx.lineTo(c.width, y * cell + .5); }
+  ctx.stroke();
+  return c.toDataURL("image/png");
+}
+// the story page shown after solving (and when reopening a solved puzzle)
+function showWin(revisit) {
+  const prog = progress[cur.id] || {};
+  const hints = prog.hints || 0;
+  const next = puzzles.findIndex((p, i) => i > curIndex && !(progress[p.id] && progress[p.id].solved));
+  const s = cur.source || {};
+  const pairClass = cur.image ? "compare" : "compare single";
+  const layTitle = cur.layTitle || cur.headline || "";
+  $("rTitle").textContent = revisit ? cur.title : "Solved!";
+  $("rMeta").textContent = `${cur.width} × ${cur.height}` + (cur.difficulty ? ` · ${cur.difficulty.label} ${stars(cur)}` : "");
+  $("story").innerHTML = `
+    <div class="${pairClass}">
+      <figure><img class="pix" src="${crigramImage(cur)}" alt="The solved CRIGram"><figcaption>Your CRIGram</figcaption></figure>
+      ${cur.image ? `<figure><img src="${cur.image}" alt="The detail of the original figure"><figcaption>The original figure</figcaption></figure>` : ""}
+    </div>
+    <div class="solved-chip">✓ Solved in ${fmtTime(prog.time || 0)} · ${hints ? `${hints} hint${hints > 1 ? "s" : ""}` : "no hints"}</div>
+    ${layTitle ? `<div class="kicker">Puzzle: ${escapeHtml(cur.title)}</div>` : ""}
+    <h2 style="margin-top:${layTitle ? 2 : 12}px">${escapeHtml(layTitle || cur.title)}</h2>
+    <div class="summary">${paragraphs(cur.laySummary || cur.description)}</div>
+    ${paperLink(s) ? `<a class="btn primary paper-btn" id="paperBtn" href="${escapeHtml(paperLink(s))}" target="_blank" rel="noopener">Read the paper ↗</a>` : ""}
+    <button class="btn paper-btn" id="shareBtn" style="width:100%">Share your result</button>
+    ${citation(s) ? `<div class="cite">${citation(s)}</div>` : ""}
+    <div class="actions">
+      ${next >= 0 ? '<button class="btn primary" id="winNext">Next puzzle</button>' : ""}
+      <button class="btn" id="winGrid">View the grid</button>
+      <button class="btn" id="winHome">All puzzles</button>
+    </div>
+    ${CONFIG.feedbackUrl ? `<p style="text-align:center;margin-top:16px"><a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">Feedback &amp; CRIG news</a></p>` : ""}`;
+  showScreen("result");
+  window.scrollTo(0, 0);
+  $("winHome").onclick = leavePuzzle;
+  $("shareBtn").onclick = () => shareResult(curIndex + 1, prog.time || 0, hints);
+  if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened`));
+  $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
+  if (next >= 0) $("winNext").onclick = () => { persist(); openPuzzle(next); };
+}
+$("resultBack").onclick = leavePuzzle;
+
+// ---------- sharing ----------
+function gameUrl() { return location.href.split("#")[0].split("?")[0].replace(/[^/]*$/, ""); }
+async function shareResult(n, time, hints) {
+  const text = `I decoded CRIGram #${n} in ${fmtTime(time)}${hints ? ` with ${hints} hint${hints > 1 ? "s" : ""}` : " without hints"} 🧬 Cell by cell, decoding our science.`;
+  const url = gameUrl();
+  track("share", "Result shared");
+  if (navigator.share) {
+    try { await navigator.share({ title: "CRIGram", text, url }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); toast("Copied! Paste it in a message or post."); }
+  catch (e) { prompt("Copy this text:", `${text} ${url}`); }
+}
+
+// ---------- personal stats page ----------
+function streaks() {
+  const days = new Set();
+  Object.values(stats).forEach(s => { days.add(dayKey(s.first)); if (s.last) days.add(dayKey(s.last)); });
+  const sorted = [...days].sort();
+  let longest = 0, run = 0, prev = null;
+  sorted.forEach(d => {
+    const t = new Date(d + "T12:00:00").getTime();
+    run = prev !== null && Math.round((t - prev) / 864e5) === 1 ? run + 1 : 1;
+    longest = Math.max(longest, run);
+    prev = t;
+  });
+  let current = 0;
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  for (let k = 0; ; k++) {
+    const d = dayKey(today.getTime() - k * 864e5);
+    if (days.has(d)) current++;
+    else if (k > 0 || current > 0) break;   // today may still be empty without breaking the streak
+    if (k > 3650) break;
+  }
+  return { current, longest, days: days.size };
+}
+function renderStats() {
+  const solvedIds = puzzles.filter(p => stats[p.id]).map(p => p.id);
+  const recs = solvedIds.map(id => stats[id]);
+  const times = recs.map(r => r.time).sort((a, b) => a - b);
+  const median = times.length ? (times.length % 2 ? times[(times.length - 1) / 2] : (times[times.length / 2 - 1] + times[times.length / 2]) / 2) : 0;
+  const noHints = recs.filter(r => !r.hints).length;
+  const st = streaks();
+  const tile = (v, l) => `<div class="tile"><b>${v}</b><small>${l}</small></div>`;
+  $("statsBody").innerHTML = `
+    <div class="tiles">
+      ${tile(`${solvedIds.length}/${puzzles.length}`, "solved")}
+      ${tile(recs.length ? Math.round(100 * noHints / recs.length) + " %" : "–", "without hints")}
+      ${tile(times.length ? fmtTime(median) : "–", "median time")}
+      ${tile(times.length ? fmtTime(times[0]) : "–", "fastest")}
+      ${tile(st.current, st.current === 1 ? "day streak" : "days streak")}
+      ${tile(st.longest, "longest streak")}
+    </div>
+    <h3 class="section-title">Puzzles</h3>
+    <ul class="stats-list">
+      ${puzzles.map((p, i) => {
+        const r = stats[p.id];
+        if (!r) return `<li class="open"><span>Puzzle ${i + 1}</span><span>not solved yet</span></li>`;
+        const date = new Date(r.first).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        return `<li><span>${i + 1}. ${escapeHtml(p.title)}</span><span>${fmtTime(r.time)} · ${r.hints ? r.hints + " hint" + (r.hints > 1 ? "s" : "") : "no hints"} · ${date}</span></li>`;
+      }).join("")}
+    </ul>
+    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A streak counts the days in a row on which you solved at least one puzzle.</p>`;
+}
+$("statsBtn").onclick = () => { renderStats(); showScreen("stats"); };
+$("statsBack").onclick = () => { renderHome(); showScreen("home"); };
+
+// ---------- installing as an app ----------
+let installEvent = null;
+const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvent = e; });
+window.addEventListener("appinstalled", () => { $("installBtn").hidden = true; track("installed", "App installed"); });
+$("installBtn").hidden = isStandalone() || !/^https?:/.test(location.protocol);
+$("installBtn").onclick = async () => {
+  if (installEvent) {
+    installEvent.prompt();
+    try { await installEvent.userChoice; } catch (e) { /* ignore */ }
+    installEvent = null;
+  } else {
+    $("installBg").classList.add("show");
+  }
+};
+if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+if (CONFIG.feedbackUrl) { $("feedbackLink").href = CONFIG.feedbackUrl; $("feedbackLink").hidden = false; }
+setupCounting();
+
+function relayout() { if (cur && $("play").classList.contains("active")) { sizeBoard(); drawBoard(); } }
+window.addEventListener("resize", relayout);
+window.addEventListener("orientationchange", () => setTimeout(relayout, 250));
+if (window.visualViewport) window.visualViewport.addEventListener("resize", relayout);
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (cur) drawBoard(); else renderHome(); });
+
+init();
+</script>
+</body>
+</html>

@@ -70,6 +70,10 @@
   .pcard small { color: var(--muted); font-size: 12px; }
   .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); margin-left: 4px; }
   .tag.done { background: rgba(31,138,76,.14); color: var(--ok); }
+  .tag.new { background: #fcb033; color: #3a2600; }
+  .tag.soon { background: var(--clue-bg); color: var(--muted); }
+  .nextup { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+  .nextup b { color: var(--ink); }
   .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
   .btn { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 16px; }
   .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
@@ -145,9 +149,10 @@
     <p>cell by cell, decoding our science</p>
   </div>
   <div class="wrap">
+    <div id="nextUp" class="nextup" hidden></div>
     <div id="list" class="grid-list"></div>
     <div id="empty" class="empty" hidden>
-      <p>No puzzles loaded yet.</p>
+      <p id="emptyText">No puzzles loaded yet.</p>
       <button class="btn primary" id="openFileBtn">Open puzzle file</button>
     </div>
     <div class="links">
@@ -230,6 +235,7 @@
       <li>Drag along a row or column to mark several cells at once. Tap a marked cell again to clear it.</li>
       <li>Every puzzle can be solved by logic alone. No guessing needed!</li>
       <li>Stuck? The bulb gives you a hint.</li>
+      <li>A new puzzle appears every Monday at 06:00 (Brussels time). Solve it within the week to keep your streak going.</li>
     </ul>
     <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
@@ -388,12 +394,51 @@ function unscramble(b64, key) {
   } catch (e) { return null; }
 }
 
+// ---------- weekly release: puzzles appear on their date at 06:00 Brussels time ----------
+const RELEASE_TZ = "Europe/Brussels", RELEASE_HOUR = 6;
+const tzParts = (ts, tz) => Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+  timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+}).formatToParts(new Date(ts)).map(x => [x.type, x.value]));
+// difference between Brussels time and UTC at a given moment, summer time included
+function tzOffsetMs(ts, tz) {
+  const p = tzParts(ts, tz);
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - Math.floor(ts / 1000) * 1000;
+}
+// "2026-10-19" -> the moment it is 06:00 in Brussels on that day
+function releaseMoment(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const guess = Date.UTC(y, m - 1, d, RELEASE_HOUR);
+  return guess - tzOffsetMs(guess - 2 * 3600e3, RELEASE_TZ);
+}
+function releaseISO(dateStr) {
+  const off = Math.round(tzOffsetMs(releaseMoment(dateStr), RELEASE_TZ) / 60000);
+  const sign = off < 0 ? "-" : "+", a = Math.abs(off);
+  return `${dateStr}T${String(RELEASE_HOUR).padStart(2, "0")}:00:00${sign}${String(Math.floor(a / 60)).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`;
+}
+function brusselsDate(ts) { const p = tzParts(ts, RELEASE_TZ); return `${p.year}-${p.month}-${p.day}`; }
+function addDays(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+const weekday = dateStr => new Date(dateStr + "T12:00:00Z").getUTCDay();   // 1 = Monday
+// the first Monday whose 06:00 release is still ahead
+function nextMonday(fromTs = Date.now()) {
+  let d = brusselsDate(fromTs);
+  while (weekday(d) !== 1 || releaseMoment(d) <= fromTs) d = addDays(d, 1);
+  return d;
+}
+function releaseTime(p) {
+  if (p.releaseAt && !isNaN(Date.parse(p.releaseAt))) return Date.parse(p.releaseAt);
+  if (p.release && /^\d{4}-\d{2}-\d{2}$/.test(p.release)) return releaseMoment(p.release);
+  return null;   // no date: part of the launch set, always visible
+}
+
 // ---------- settings ----------
 // goatcounter: the code of a GoatCounter site (https://CODE.goatcounter.com), empty = no counting
 // feedbackUrl: a link to a feedback form (e.g. Microsoft Forms), empty = no link
 const CONFIG = {
   goatcounter: "crigram",
-  feedbackUrl: "",
+  feedbackUrl: "https://forms.cloud.microsoft/e/20qznW8iRE",
 };
 
 // ---------- storage ----------
@@ -457,14 +502,30 @@ function preparePuzzles(data) {
   });
 }
 
-let puzzles = [];
+let puzzles = [];        // the puzzles a player can see now, in release order
+let allPuzzles = [];     // every puzzle in the file, including scheduled ones
+let nextRelease = null, releaseTimer = 0;
+function applyRelease() {
+  const now = Date.now();
+  allPuzzles = allPuzzles.map((p, i) => ({ p, i, t: releaseTime(p) }))
+    .sort((a, b) => (a.t === null ? -Infinity : a.t) - (b.t === null ? -Infinity : b.t) || a.i - b.i)
+    .map(o => o.p);
+  const isOut = p => { const t = releaseTime(p); return t === null || t <= now; };
+  // the test version shows scheduled puzzles too, so they can be checked before they go live
+  puzzles = IS_TEST ? allPuzzles.slice() : allPuzzles.filter(isOut);
+  const future = allPuzzles.map(releaseTime).filter(t => t !== null && t > now);
+  nextRelease = future.length ? Math.min(...future) : null;
+  clearTimeout(releaseTimer);
+  if (nextRelease && nextRelease - now < 2 ** 31 - 1) {
+    releaseTimer = setTimeout(() => { applyRelease(); if (!cur) renderHome(); }, Math.max(1000, nextRelease - now + 1000));
+  }
+}
 let progress = readJSON(PROGRESS_KEY, {});
 function saveProgress() { writeJSON(PROGRESS_KEY, progress); }
 // personal statistics: one record per solved puzzle, kept even when a puzzle is restarted
 const STATS_KEY = "crigram.stats" + KEY_SUFFIX;
 let stats = readJSON(STATS_KEY, {});
 function saveStats() { writeJSON(STATS_KEY, stats); }
-function dayKey(ts) { const d = new Date(ts); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
 
 // ---------- anonymous counting (GoatCounter, only when configured) ----------
 const pendingEvents = [];
@@ -549,10 +610,22 @@ function thumbCanvas(p, prog) {
   ctx.stroke();
   return c;
 }
+function whenText(t) {
+  const ms = t - Date.now(), h = ms / 3600e3;
+  const rel = h < 1 ? `in ${Math.max(1, Math.round(ms / 60000))} min` : h < 24 ? `in ${Math.round(h)} hour${Math.round(h) === 1 ? "" : "s"}` : `in ${Math.round(h / 24)} day${Math.round(h / 24) === 1 ? "" : "s"}`;
+  const abs = new Date(t).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  return { abs, rel };
+}
 function renderHome() {
   const list = $("list");
   list.innerHTML = "";
   $("empty").hidden = puzzles.length > 0;
+  $("emptyText").textContent = allPuzzles.length && nextRelease ? `The first puzzle arrives ${whenText(nextRelease).abs}.` : "No puzzles loaded yet.";
+  $("openFileBtn").hidden = allPuzzles.length > 0;
+  const nu = $("nextUp");
+  nu.hidden = !nextRelease || !puzzles.length;
+  if (nextRelease) { const w = whenText(nextRelease); nu.innerHTML = `Next puzzle: <b>${w.abs}</b> · ${w.rel}`; }
+  const now = Date.now();
   puzzles.forEach((p, i) => {
     const prog = progress[p.id];
     const b = document.createElement("button");
@@ -565,9 +638,12 @@ function renderHome() {
       b.appendChild(thumbCanvas(p, prog));
     }
     const name = prog && prog.solved ? p.title : "Puzzle " + (i + 1);
-    const status = prog && prog.solved
-      ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
-      : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "";
+    const rt = releaseTime(p);
+    const status = (rt !== null && rt > now ? `<span class="tag soon">scheduled ${new Date(rt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>` : "") +
+      (rt !== null && rt <= now && now - rt < 6048e5 ? '<span class="tag new">new this week</span>' : "") +
+      (prog && prog.solved
+        ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
+        : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "");
     b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${stars(p)}${status}</small>`);
     b.onclick = () => openPuzzle(i);
     list.appendChild(b);
@@ -578,9 +654,10 @@ function renderHome() {
 function setPuzzles(data, persist) {
   const prepared = preparePuzzles(data);
   if (!prepared.length) { toast("No puzzles found in this file."); return false; }
-  puzzles = prepared;
+  allPuzzles = prepared;
+  applyRelease();
   if (persist) {
-    const raw = puzzles.map(({ sol, rows, cols, ...rest }) => rest);
+    const raw = allPuzzles.map(({ sol, rows, cols, ...rest }) => rest);
     if (!writeJSON(PUZZLES_KEY, raw)) toast("Puzzles loaded, but too large to remember for next time.");
   }
   renderHome();
@@ -679,7 +756,10 @@ function leavePuzzle() {
   showScreen("home");
 }
 $("backBtn").onclick = leavePuzzle;
-document.addEventListener("visibilitychange", () => { if (document.hidden && cur) { pauseTimer(); persist(); } });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && cur) { pauseTimer(); persist(); }
+  if (!document.hidden && allPuzzles.length) { applyRelease(); if (!cur) renderHome(); }
+});
 
 function setMode(m) {
   mode = m;
@@ -1059,26 +1139,17 @@ async function shareResult(n, time, hints) {
 }
 
 // ---------- personal stats page ----------
+// weekly streak: weekly puzzles in a row that were solved within 7 days of their release
 function streaks() {
-  const days = new Set();
-  Object.values(stats).forEach(s => { days.add(dayKey(s.first)); if (s.last) days.add(dayKey(s.last)); });
-  const sorted = [...days].sort();
-  let longest = 0, run = 0, prev = null;
-  sorted.forEach(d => {
-    const t = new Date(d + "T12:00:00").getTime();
-    run = prev !== null && Math.round((t - prev) / 864e5) === 1 ? run + 1 : 1;
-    longest = Math.max(longest, run);
-    prev = t;
-  });
-  let current = 0;
-  const today = new Date(); today.setHours(12, 0, 0, 0);
-  for (let k = 0; ; k++) {
-    const d = dayKey(today.getTime() - k * 864e5);
-    if (days.has(d)) current++;
-    else if (k > 0 || current > 0) break;   // today may still be empty without breaking the streak
-    if (k > 3650) break;
-  }
-  return { current, longest, days: days.size };
+  const now = Date.now(), WEEK = 6048e5;
+  const weekly = puzzles.map(p => ({ p, t: releaseTime(p) })).filter(o => o.t !== null && o.t <= now);
+  const inTime = weekly.map(o => { const s = stats[o.p.id]; return !!(s && s.first >= o.t && s.first < o.t + WEEK); });
+  let longest = 0, run = 0;
+  inTime.forEach(v => { run = v ? run + 1 : 0; longest = Math.max(longest, run); });
+  let k = inTime.length - 1, current = 0;
+  if (k >= 0 && !inTime[k] && now < weekly[k].t + WEEK) k--;   // this week's puzzle can still be solved
+  for (; k >= 0 && inTime[k]; k--) current++;
+  return { current, longest, weekly: weekly.length };
 }
 function renderStats() {
   const solvedIds = puzzles.filter(p => stats[p.id]).map(p => p.id);
@@ -1094,7 +1165,7 @@ function renderStats() {
       ${tile(recs.length ? Math.round(100 * noHints / recs.length) + " %" : "–", "without hints")}
       ${tile(times.length ? fmtTime(median) : "–", "median time")}
       ${tile(times.length ? fmtTime(times[0]) : "–", "fastest")}
-      ${tile(st.current, st.current === 1 ? "day streak" : "days streak")}
+      ${tile(st.current, st.current === 1 ? "week streak" : "weeks streak")}
       ${tile(st.longest, "longest streak")}
     </div>
     <h3 class="section-title">Puzzles</h3>
@@ -1106,7 +1177,7 @@ function renderStats() {
         return `<li><span>${i + 1}. ${escapeHtml(p.title)}</span><span>${fmtTime(r.time)} · ${r.hints ? r.hints + " hint" + (r.hints > 1 ? "s" : "") : "no hints"} · ${date}</span></li>`;
       }).join("")}
     </ul>
-    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A streak counts the days in a row on which you solved at least one puzzle.</p>`;
+    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time). Your streak counts the weeks in a row in which you solved the new puzzle before the next one came out. The puzzles from the launch week don't count.</p>`;
 }
 $("statsBtn").onclick = () => { renderStats(); showScreen("stats"); };
 $("statsBack").onclick = () => { renderHome(); showScreen("home"); };

@@ -266,6 +266,88 @@ function lineClue(arr) {
   return c;
 }
 
+// full solve from the clues (published files carry no solution)
+function propagate(st, W, H, rows, cols) {
+  const dirty = new Uint8Array(W + H).fill(1);
+  let any = true;
+  while (any) {
+    any = false;
+    for (let idx = 0; idx < W + H; idx++) {
+      if (!dirty[idx]) continue;
+      dirty[idx] = 0;
+      const n = idx < H ? W : H, line = new Int8Array(n);
+      for (let x = 0; x < n; x++) line[x] = st[idx < H ? idx * W + x : x * W + idx - H];
+      const out = solveLine(line, idx < H ? rows[idx] : cols[idx - H]);
+      if (!out) return false;
+      for (let x = 0; x < n; x++) {
+        if (out.res[x] !== line[x]) {
+          st[idx < H ? idx * W + x : x * W + idx - H] = out.res[x];
+          dirty[idx < H ? H + x : x] = 1;
+          any = true;
+        }
+      }
+    }
+  }
+  return true;
+}
+function solveAll(W, H, rows, cols, limit) {
+  const sols = [];
+  let nodes = 0;
+  function rec(st) {
+    if (sols.length >= limit || ++nodes > 20000) return;
+    if (!propagate(st, W, H, rows, cols)) return;
+    const idx = st.indexOf(-1);
+    if (idx < 0) { sols.push(Uint8Array.from(st)); return; }
+    for (const v of [1, 0]) { const c = st.slice(); c[idx] = v; rec(c); if (sols.length >= limit) return; }
+  }
+  rec(new Int8Array(W * H).fill(-1));
+  return sols;
+}
+
+// ---------- scrambling the reveal (not encryption: it only stops casual peeking) ----------
+// The key is the solution itself, so the text and figure only become readable once the grid is solved.
+function fnv1a(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function keystream(seed, n) {
+  const out = new Uint8Array(n);
+  let a = seed >>> 0;
+  for (let i = 0; i < n; i++) {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    out[i] = ((t ^ (t >>> 14)) >>> 0) & 255;
+  }
+  return out;
+}
+function bytesToB64(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function b64ToBytes(b64) {
+  const s = atob(b64), a = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+  return a;
+}
+function solutionKey(rowsOf01, width) { return width + "|" + rowsOf01.join(""); }
+function scramble(text, key) {
+  const b = new TextEncoder().encode("CRIGRAM:" + text), k = keystream(fnv1a(key), b.length);
+  for (let i = 0; i < b.length; i++) b[i] ^= k[i];
+  return bytesToB64(b);
+}
+function unscramble(b64, key) {
+  try {
+    const b = b64ToBytes(b64), k = keystream(fnv1a(key), b.length);
+    for (let i = 0; i < b.length; i++) b[i] ^= k[i];
+    const t = new TextDecoder().decode(b);
+    return t.startsWith("CRIGRAM:") ? t.slice(8) : null;
+  } catch (e) { return null; }
+}
+
 // ---------- storage ----------
 const PUZZLES_KEY = "crigram.puzzles", PROGRESS_KEY = "crigram.progress";
 function readJSON(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
@@ -276,9 +358,33 @@ function validPuzzle(p) {
   return p && Number.isInteger(p.width) && Number.isInteger(p.height) && Array.isArray(p.solution) &&
     p.solution.length === p.height && p.solution.every(s => typeof s === "string" && s.length === p.width && /^[01]+$/.test(s));
 }
+const isClueList = (a, n) => Array.isArray(a) && a.length === n && a.every(c => Array.isArray(c) && c.every(v => Number.isInteger(v) && v > 0));
+function validPublished(p) {
+  return p && Number.isInteger(p.width) && Number.isInteger(p.height) && typeof p.secret === "string" && p.clues &&
+    isClueList(p.clues.rows, p.height) && isClueList(p.clues.cols, p.width);
+}
+// solves a published puzzle from its clues and unlocks the reveal with that solution
+function unlockPublished(p) {
+  const W = p.width, H = p.height, rows = p.clues.rows, cols = p.clues.cols;
+  const sols = solveAll(W, H, rows, cols, 20);
+  for (const sol of sols) {
+    const solution = Array.from({ length: H }, (_, r) => Array.from(sol.subarray(r * W, (r + 1) * W)).join(""));
+    const text = unscramble(p.secret, solutionKey(solution, W));
+    if (text != null) {
+      try { return { solution, ...JSON.parse(text) }; } catch (e) { /* try the next solution */ }
+    }
+  }
+  return null;
+}
 function preparePuzzles(data) {
   const arr = Array.isArray(data) ? data : Array.isArray(data.puzzles) ? data.puzzles : [data];
-  return arr.filter(validPuzzle).map((p, i) => {
+  return arr.map(p => {
+    if (!validPublished(p) || validPuzzle(p)) return p;
+    const r = unlockPublished(p);
+    if (!r) return null;
+    const { secret, ...rest } = p;
+    return { ...rest, ...r };
+  }).filter(validPuzzle).map((p, i) => {
     const W = p.width, H = p.height;
     const sol = new Uint8Array(W * H);
     p.solution.forEach((s, r) => { for (let c = 0; c < W; c++) sol[r * W + c] = s[c] === "1" ? 1 : 0; });

@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0079c1">
 <title>CRIGram</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CRIGram">
 <style>
   :root {
     --blue: #0079c1;
@@ -65,11 +70,19 @@
   .pcard small { color: var(--muted); font-size: 12px; }
   .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); margin-left: 4px; }
   .tag.done { background: rgba(31,138,76,.14); color: var(--ok); }
+  .tag.new { background: #fcb033; color: #3a2600; }
+  .tag.soon { background: var(--clue-bg); color: var(--muted); }
+  .nextup { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+  .nextup b { color: var(--ink); }
   .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
   .btn { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 16px; }
   .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
   .links { display: flex; gap: 16px; justify-content: center; margin: 22px 0 8px; flex-wrap: wrap; }
-  .link { background: none; border: 0; color: var(--blue); padding: 4px; font-size: 14px; }
+  .link { background: none; border: 0; color: var(--blue); padding: 4px; font-size: 14px; text-decoration: none; }
+  a.btn { display: inline-block; text-decoration: none; text-align: center; }
+  .feedback-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 18px; font-size: 14px; }
+  .feedback-card span { color: var(--muted); }
+  .feedback-card[hidden] { display: none; }
 
   /* play */
   .bar { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--card); border-bottom: 1px solid var(--line); }
@@ -104,6 +117,17 @@
   .sheet .actions .btn { flex: 1; }
   .rules li { margin-bottom: 6px; }
 
+  /* stats page */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; text-align: center; }
+  .tile b { display: block; font-size: 22px; line-height: 1.2; }
+  .tile small { color: var(--muted); font-size: 12px; }
+  .stats-list { list-style: none; padding: 0; margin: 18px 0 0; }
+  .stats-list li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line); font-size: 14px; }
+  .stats-list li span:last-child { color: var(--muted); text-align: right; white-space: nowrap; }
+  .stats-list li.open span:first-child { color: var(--muted); }
+  .section-title { font-size: 15px; margin: 22px 0 4px; }
+
   /* result page */
   .story { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
   .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
@@ -129,15 +153,22 @@
     <p>cell by cell, decoding our science</p>
   </div>
   <div class="wrap">
+    <div id="nextUp" class="nextup" hidden></div>
     <div id="list" class="grid-list"></div>
     <div id="empty" class="empty" hidden>
-      <p>No puzzles loaded yet.</p>
+      <p id="emptyText">No puzzles loaded yet.</p>
       <button class="btn primary" id="openFileBtn">Open puzzle file</button>
     </div>
+    <div class="feedback-card" id="feedbackCard" hidden>
+      <div><b>Enjoying CRIGram?</b><br><span>Tell us what you think, or sign up for news from CRIG.</span></div>
+      <a class="btn primary" id="feedbackLink" href="#" target="_blank" rel="noopener">Feedback &amp; CRIG news</a>
+    </div>
     <div class="links">
+      <button class="link" id="statsBtn">Your stats</button>
       <button class="link" id="howBtn">How to play</button>
-      <button class="link" id="loadBtn">Load puzzle file</button>
-      <button class="link" id="resetBtn">Reset progress</button>
+      <button class="link" id="installBtn" hidden>Install app</button>
+      <!-- only for opening the game as a local file on a computer, when testing -->
+      <button class="link" id="loadBtn" hidden>Load puzzle file</button>
     </div>
     <input type="file" id="fileInput" accept=".json,application/json" hidden>
   </div>
@@ -180,6 +211,25 @@
   </div>
   <article class="wrap story" id="story"></article>
 </section>
+<section id="stats" class="screen">
+  <div class="bar">
+    <button class="icon" id="statsBack" aria-label="Back to puzzles">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="title"><b>Your stats</b><small>stored on this device only</small></div>
+  </div>
+  <div class="wrap" id="statsBody"></div>
+  <div class="wrap" style="padding-top:0;text-align:center"><button class="link" id="resetBtn" style="color:var(--muted)">Reset progress and stats</button></div>
+</section>
+<div class="sheet-bg" id="installBg">
+  <div class="sheet">
+    <h2>Install CRIGram</h2>
+    <div class="sub">Put CRIGram on your home screen. It opens full screen and also works offline.</div>
+    <p><b>iPhone or iPad (Safari):</b> tap the Share button <span aria-hidden="true">⎋</span> at the bottom of the screen, then <b>Add to Home Screen</b>.</p>
+    <p><b>Android (Chrome):</b> tap the menu <b>⋮</b> at the top right, then <b>Install app</b> or <b>Add to Home screen</b>.</p>
+    <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+  </div>
+</div>
 <div class="sheet-bg" id="howBg">
   <div class="sheet">
     <h2>How to play</h2>
@@ -191,7 +241,9 @@
       <li>Drag along a row or column to mark several cells at once. Tap a marked cell again to clear it.</li>
       <li>Every puzzle can be solved by logic alone. No guessing needed!</li>
       <li>Stuck? The bulb gives you a hint.</li>
+      <li>A new puzzle appears every Monday at 06:00 (Brussels time). Solve it within the week to keep your streak going.</li>
     </ul>
+    <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
   </div>
 </div>
@@ -348,8 +400,60 @@ function unscramble(b64, key) {
   } catch (e) { return null; }
 }
 
+// ---------- weekly release: puzzles appear on their date at 06:00 Brussels time ----------
+const RELEASE_TZ = "Europe/Brussels", RELEASE_HOUR = 6;
+const tzParts = (ts, tz) => Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+  timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
+}).formatToParts(new Date(ts)).map(x => [x.type, x.value]));
+// difference between Brussels time and UTC at a given moment, summer time included
+function tzOffsetMs(ts, tz) {
+  const p = tzParts(ts, tz);
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - Math.floor(ts / 1000) * 1000;
+}
+// "2026-10-19" -> the moment it is 06:00 in Brussels on that day
+function releaseMoment(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const guess = Date.UTC(y, m - 1, d, RELEASE_HOUR);
+  return guess - tzOffsetMs(guess - 2 * 3600e3, RELEASE_TZ);
+}
+function releaseISO(dateStr) {
+  const off = Math.round(tzOffsetMs(releaseMoment(dateStr), RELEASE_TZ) / 60000);
+  const sign = off < 0 ? "-" : "+", a = Math.abs(off);
+  return `${dateStr}T${String(RELEASE_HOUR).padStart(2, "0")}:00:00${sign}${String(Math.floor(a / 60)).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`;
+}
+function brusselsDate(ts) { const p = tzParts(ts, RELEASE_TZ); return `${p.year}-${p.month}-${p.day}`; }
+function addDays(dateStr, n) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+const weekday = dateStr => new Date(dateStr + "T12:00:00Z").getUTCDay();   // 1 = Monday
+// the first Monday whose 06:00 release is still ahead
+function nextMonday(fromTs = Date.now()) {
+  let d = brusselsDate(fromTs);
+  while (weekday(d) !== 1 || releaseMoment(d) <= fromTs) d = addDays(d, 1);
+  return d;
+}
+function releaseTime(p) {
+  if (p.releaseAt && !isNaN(Date.parse(p.releaseAt))) return Date.parse(p.releaseAt);
+  if (p.release && /^\d{4}-\d{2}-\d{2}$/.test(p.release)) return releaseMoment(p.release);
+  return null;   // no date: part of the launch set, always visible
+}
+
+// ---------- settings ----------
+// goatcounter: the code of a GoatCounter site (https://CODE.goatcounter.com), empty = no counting
+// feedbackUrl: a link to a feedback form (e.g. Microsoft Forms), empty = no link
+const CONFIG = {
+  goatcounter: "crigram",
+  feedbackUrl: "https://forms.cloud.microsoft/e/20qznW8iRE",
+};
+
 // ---------- storage ----------
-const PUZZLES_KEY = "crigram.puzzles", PROGRESS_KEY = "crigram.progress";
+// a copy in a folder called "test" (or "...-test") is a test site: it keeps its own progress and stats
+// on the phone and is never counted, so testing does not mix with the live game
+const SITE_DIR = location.pathname.replace(/[^/]*$/, "");
+const IS_TEST = /(\/test|-test)\/$/.test(SITE_DIR);
+const KEY_SUFFIX = IS_TEST ? "@test" : "";
+const PUZZLES_KEY = "crigram.puzzles" + KEY_SUFFIX, PROGRESS_KEY = "crigram.progress" + KEY_SUFFIX;
 function readJSON(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
 function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch (e) { return false; } }
 
@@ -404,9 +508,56 @@ function preparePuzzles(data) {
   });
 }
 
-let puzzles = [];
+let puzzles = [];        // the puzzles a player can see now, in release order
+let allPuzzles = [];     // every puzzle in the file, including scheduled ones
+let nextRelease = null, releaseTimer = 0;
+function applyRelease() {
+  const now = Date.now();
+  allPuzzles = allPuzzles.map((p, i) => ({ p, i, t: releaseTime(p) }))
+    .sort((a, b) => (a.t === null ? -Infinity : a.t) - (b.t === null ? -Infinity : b.t) || a.i - b.i)
+    .map(o => o.p);
+  const isOut = p => { const t = releaseTime(p); return t === null || t <= now; };
+  // the test version shows scheduled puzzles too, so they can be checked before they go live
+  puzzles = IS_TEST ? allPuzzles.slice() : allPuzzles.filter(isOut);
+  const future = allPuzzles.map(releaseTime).filter(t => t !== null && t > now);
+  nextRelease = future.length ? Math.min(...future) : null;
+  clearTimeout(releaseTimer);
+  if (nextRelease && nextRelease - now < 2 ** 31 - 1) {
+    releaseTimer = setTimeout(() => { applyRelease(); if (!cur) renderHome(); }, Math.max(1000, nextRelease - now + 1000));
+  }
+}
 let progress = readJSON(PROGRESS_KEY, {});
 function saveProgress() { writeJSON(PROGRESS_KEY, progress); }
+// personal statistics: one record per solved puzzle, kept even when a puzzle is restarted
+const STATS_KEY = "crigram.stats" + KEY_SUFFIX;
+let stats = readJSON(STATS_KEY, {});
+function saveStats() { writeJSON(STATS_KEY, stats); }
+
+// ---------- anonymous counting (GoatCounter, only when configured) ----------
+const pendingEvents = [];
+function track(path, title) {
+  if (!CONFIG.goatcounter || IS_TEST) return;
+  const gc = window.goatcounter;
+  if (gc && gc.count) gc.count({ path, title: title || path, event: true });
+  else pendingEvents.push([path, title]);
+}
+function setupCounting() {
+  if (IS_TEST) {
+    document.querySelector(".hero h1").insertAdjacentHTML("afterend", '<p style="margin:6px 0 0;font-weight:700;letter-spacing:.5px">Test version</p>');
+    return;
+  }
+  if (!CONFIG.goatcounter || !/^https?:/.test(location.protocol)) return;
+  const s = document.createElement("script");
+  s.async = true;
+  s.src = "https://gc.zgo.at/count.js";
+  s.dataset.goatcounter = `https://${CONFIG.goatcounter}.goatcounter.com/count`;
+  s.onload = () => { while (pendingEvents.length) track(...pendingEvents.shift()); };
+  document.head.appendChild(s);
+  $("privacyNote").hidden = false;
+}
+function timeBucket(sec) {
+  return sec < 60 ? "under-1-min" : sec < 120 ? "1-2-min" : sec < 300 ? "2-5-min" : sec < 600 ? "5-10-min" : sec < 1200 ? "10-20-min" : "over-20-min";
+}
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -465,10 +616,22 @@ function thumbCanvas(p, prog) {
   ctx.stroke();
   return c;
 }
+function whenText(t) {
+  const ms = t - Date.now(), h = ms / 3600e3;
+  const rel = h < 1 ? `in ${Math.max(1, Math.round(ms / 60000))} min` : h < 24 ? `in ${Math.round(h)} hour${Math.round(h) === 1 ? "" : "s"}` : `in ${Math.round(h / 24)} day${Math.round(h / 24) === 1 ? "" : "s"}`;
+  const abs = new Date(t).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  return { abs, rel };
+}
 function renderHome() {
   const list = $("list");
   list.innerHTML = "";
   $("empty").hidden = puzzles.length > 0;
+  $("emptyText").textContent = allPuzzles.length && nextRelease ? `The first puzzle arrives ${whenText(nextRelease).abs}.` : "No puzzles loaded yet.";
+  $("openFileBtn").hidden = allPuzzles.length > 0;
+  const nu = $("nextUp");
+  nu.hidden = !nextRelease || !puzzles.length;
+  if (nextRelease) { const w = whenText(nextRelease); nu.innerHTML = `Next puzzle: <b>${w.abs}</b> · ${w.rel}`; }
+  const now = Date.now();
   puzzles.forEach((p, i) => {
     const prog = progress[p.id];
     const b = document.createElement("button");
@@ -481,9 +644,12 @@ function renderHome() {
       b.appendChild(thumbCanvas(p, prog));
     }
     const name = prog && prog.solved ? p.title : "Puzzle " + (i + 1);
-    const status = prog && prog.solved
-      ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
-      : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "";
+    const rt = releaseTime(p);
+    const status = (rt !== null && rt > now ? `<span class="tag soon">scheduled ${new Date(rt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>` : "") +
+      (rt !== null && rt <= now && now - rt < 6048e5 ? '<span class="tag new">new this week</span>' : "") +
+      (prog && prog.solved
+        ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
+        : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "");
     b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${stars(p)}${status}</small>`);
     b.onclick = () => openPuzzle(i);
     list.appendChild(b);
@@ -494,9 +660,10 @@ function renderHome() {
 function setPuzzles(data, persist) {
   const prepared = preparePuzzles(data);
   if (!prepared.length) { toast("No puzzles found in this file."); return false; }
-  puzzles = prepared;
+  allPuzzles = prepared;
+  applyRelease();
   if (persist) {
-    const raw = puzzles.map(({ sol, rows, cols, ...rest }) => rest);
+    const raw = allPuzzles.map(({ sol, rows, cols, ...rest }) => rest);
     if (!writeJSON(PUZZLES_KEY, raw)) toast("Puzzles loaded, but too large to remember for next time.");
   }
   renderHome();
@@ -514,6 +681,7 @@ async function init() {
 function pickFile() { $("fileInput").click(); }
 $("openFileBtn").onclick = pickFile;
 $("loadBtn").onclick = pickFile;
+$("loadBtn").hidden = /^https?:/.test(location.protocol);
 $("fileInput").onchange = e => {
   const f = e.target.files[0];
   if (!f) return;
@@ -526,8 +694,8 @@ $("fileInput").onchange = e => {
   r.readAsText(f);
 };
 $("resetBtn").onclick = () => {
-  if (!confirm("Reset all progress?")) return;
-  progress = {}; saveProgress(); renderHome();
+  if (!confirm("Reset all progress and your stats?")) return;
+  progress = {}; saveProgress(); stats = {}; saveStats(); renderHome(); renderStats();
 };
 $("howBtn").onclick = () => $("howBg").classList.add("show");
 document.querySelectorAll(".sheet-bg").forEach(bg => bg.addEventListener("click", e => {
@@ -595,7 +763,10 @@ function leavePuzzle() {
   showScreen("home");
 }
 $("backBtn").onclick = leavePuzzle;
-document.addEventListener("visibilitychange", () => { if (document.hidden && cur) { pauseTimer(); persist(); } });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && cur) { pauseTimer(); persist(); }
+  if (!document.hidden && allPuzzles.length) { applyRelease(); if (!cur) renderHome(); }
+});
 
 function setMode(m) {
   mode = m;
@@ -727,6 +898,7 @@ board.addEventListener("pointerdown", e => {
   undoStack.push(cells.slice());
   if (undoStack.length > 200) undoStack.shift();
   stroke = { start: p, snap: cells.slice(), target, action, axis: null };
+  if (!elapsed && !startedAt && !cells.some(v => v)) track(`start/${cur.id}`, `Puzzle ${curIndex + 1} started`);
   startTimer();
   applyStroke(p);
 });
@@ -837,6 +1009,18 @@ $("hintBtn").onclick = () => {
   persist();
   checkWin();
 };
+function recordSolve() {
+  const prog = progress[cur.id] || {}, time = prog.time || 0, hints = prog.hints || 0, now = Date.now();
+  const prev = stats[cur.id];
+  stats[cur.id] = prev
+    ? { ...prev, best: Math.min(prev.best, time), solves: (prev.solves || 1) + 1, last: now }
+    : { first: now, last: now, time, hints, best: time, solves: 1 };
+  saveStats();
+  const n = curIndex + 1;
+  track(`solved/${cur.id}`, `Puzzle ${n} solved`);
+  track(`solved/${cur.id}/time-${timeBucket(time)}`, `Puzzle ${n} solve time`);
+  track(`solved/${cur.id}/hints-${hints === 0 ? "0" : hints === 1 ? "1" : "2-or-more"}`, `Puzzle ${n} hints used`);
+}
 function bumpHints() {
   const prev = progress[cur.id] || {};
   progress[cur.id] = { ...prev, hints: (prev.hints || 0) + 1 };
@@ -850,6 +1034,7 @@ function checkWin() {
   pauseTimer();
   for (let k = 0; k < cells.length; k++) cells[k] = cells[k] === 1 ? 1 : 2;
   persist();
+  recordSolve();
   $("pTitle").textContent = cur.title;
   $("infoBtn").hidden = false;
   updateMeta();
@@ -928,20 +1113,109 @@ function showWin(revisit) {
     ${layTitle ? `<div class="kicker">Puzzle: ${escapeHtml(cur.title)}</div>` : ""}
     <h2 style="margin-top:${layTitle ? 2 : 12}px">${escapeHtml(layTitle || cur.title)}</h2>
     <div class="summary">${paragraphs(cur.laySummary || cur.description)}</div>
-    ${paperLink(s) ? `<a class="btn primary paper-btn" href="${escapeHtml(paperLink(s))}" target="_blank" rel="noopener">Read the paper ↗</a>` : ""}
+    ${paperLink(s) ? `<a class="btn primary paper-btn" id="paperBtn" href="${escapeHtml(paperLink(s))}" target="_blank" rel="noopener">Read the paper ↗</a>` : ""}
+    <button class="btn paper-btn" id="shareBtn" style="width:100%">Share your result</button>
     ${citation(s) ? `<div class="cite">${citation(s)}</div>` : ""}
     <div class="actions">
       ${next >= 0 ? '<button class="btn primary" id="winNext">Next puzzle</button>' : ""}
       <button class="btn" id="winGrid">View the grid</button>
       <button class="btn" id="winHome">All puzzles</button>
-    </div>`;
+    </div>
+    ${CONFIG.feedbackUrl ? `<p style="text-align:center;margin-top:16px"><a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">Feedback &amp; CRIG news</a></p>` : ""}`;
   showScreen("result");
   window.scrollTo(0, 0);
   $("winHome").onclick = leavePuzzle;
+  $("shareBtn").onclick = () => shareResult(curIndex + 1, prog.time || 0, hints);
+  if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened`));
   $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
   if (next >= 0) $("winNext").onclick = () => { persist(); openPuzzle(next); };
 }
 $("resultBack").onclick = leavePuzzle;
+
+// ---------- sharing ----------
+function gameUrl() { return location.href.split("#")[0].split("?")[0].replace(/[^/]*$/, ""); }
+async function shareResult(n, time, hints) {
+  const text = `I decoded CRIGram #${n} in ${fmtTime(time)}${hints ? ` with ${hints} hint${hints > 1 ? "s" : ""}` : " without hints"} 🧬 Cell by cell, decoding our science.`;
+  const url = gameUrl();
+  track("share", "Result shared");
+  if (navigator.share) {
+    try { await navigator.share({ title: "CRIGram", text, url }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); toast("Copied! Paste it in a message or post."); }
+  catch (e) { prompt("Copy this text:", `${text} ${url}`); }
+}
+
+// ---------- personal stats page ----------
+// weekly streak: weekly puzzles in a row that were solved within 7 days of their release
+function streaks() {
+  const now = Date.now(), WEEK = 6048e5;
+  const weekly = puzzles.map(p => ({ p, t: releaseTime(p) })).filter(o => o.t !== null && o.t <= now);
+  const inTime = weekly.map(o => { const s = stats[o.p.id]; return !!(s && s.first >= o.t && s.first < o.t + WEEK); });
+  let longest = 0, run = 0;
+  inTime.forEach(v => { run = v ? run + 1 : 0; longest = Math.max(longest, run); });
+  let k = inTime.length - 1, current = 0;
+  if (k >= 0 && !inTime[k] && now < weekly[k].t + WEEK) k--;   // this week's puzzle can still be solved
+  for (; k >= 0 && inTime[k]; k--) current++;
+  return { current, longest, weekly: weekly.length };
+}
+function renderStats() {
+  const solvedIds = puzzles.filter(p => stats[p.id]).map(p => p.id);
+  const recs = solvedIds.map(id => stats[id]);
+  const times = recs.map(r => r.time).sort((a, b) => a - b);
+  const median = times.length ? (times.length % 2 ? times[(times.length - 1) / 2] : (times[times.length / 2 - 1] + times[times.length / 2]) / 2) : 0;
+  const noHints = recs.filter(r => !r.hints).length;
+  const st = streaks();
+  const tile = (v, l) => `<div class="tile"><b>${v}</b><small>${l}</small></div>`;
+  $("statsBody").innerHTML = `
+    <div class="tiles">
+      ${tile(`${solvedIds.length}/${puzzles.length}`, "solved")}
+      ${tile(recs.length ? Math.round(100 * noHints / recs.length) + " %" : "–", "without hints")}
+      ${tile(times.length ? fmtTime(median) : "–", "median time")}
+      ${tile(times.length ? fmtTime(times[0]) : "–", "fastest")}
+      ${tile(st.current, st.current === 1 ? "week streak" : "weeks streak")}
+      ${tile(st.longest, "longest streak")}
+    </div>
+    <h3 class="section-title">Puzzles</h3>
+    <ul class="stats-list">
+      ${puzzles.map((p, i) => {
+        const r = stats[p.id];
+        if (!r) return `<li class="open"><span>Puzzle ${i + 1}</span><span>not solved yet</span></li>`;
+        const date = new Date(r.first).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        return `<li><span>${i + 1}. ${escapeHtml(p.title)}</span><span>${fmtTime(r.time)} · ${r.hints ? r.hints + " hint" + (r.hints > 1 ? "s" : "") : "no hints"} · ${date}</span></li>`;
+      }).join("")}
+    </ul>
+    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time). Your streak counts the weeks in a row in which you solved the new puzzle before the next one came out. The puzzles from the launch week don't count.</p>`;
+}
+$("statsBtn").onclick = () => { renderStats(); showScreen("stats"); };
+$("statsBack").onclick = () => { renderHome(); showScreen("home"); };
+
+// ---------- installing as an app ----------
+let installEvent = null;
+const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+// shown on phones and tablets (touch screens), and on computers only when the browser offers installing
+function updateInstallLink() {
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  $("installBtn").hidden = isStandalone() || !/^https?:/.test(location.protocol) || !(installEvent || touch);
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvent = e; updateInstallLink(); });
+window.addEventListener("appinstalled", () => { installEvent = null; $("installBtn").hidden = true; track("installed", "App installed"); });
+updateInstallLink();
+$("installBtn").onclick = async () => {
+  if (installEvent) {
+    installEvent.prompt();
+    try { await installEvent.userChoice; } catch (e) { /* ignore */ }
+    installEvent = null;
+    updateInstallLink();
+  } else {
+    $("installBg").classList.add("show");
+  }
+};
+if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {}));
+}
+if (CONFIG.feedbackUrl) { $("feedbackLink").href = CONFIG.feedbackUrl; $("feedbackCard").hidden = false; }
+$("feedbackLink").addEventListener("click", () => track("feedback", "Feedback form opened"));
+setupCounting();
 
 function relayout() { if (cur && $("play").classList.contains("active")) { sizeBoard(); drawBoard(); } }
 window.addEventListener("resize", relayout);

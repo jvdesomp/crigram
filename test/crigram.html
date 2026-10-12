@@ -1165,9 +1165,11 @@ function recordSolve() {
   saveStats();
   if (prev) return;   // only the first solve counts in the shared statistics
   const n = curIndex + 1;
-  track(`solved/${cur.id}`, `Puzzle ${n} solved`);
-  track(`solved/${cur.id}/time-${timeBucket(time)}`, `Puzzle ${n} solve time`);
-  track(`solved/${cur.id}/hints-${hints === 0 ? "0" : hints === 1 ? "1" : "2-or-more"}`, `Puzzle ${n} hints used`);
+  // the puzzle name is only known after solving; it goes into the titles, which only show in the private dashboard
+  const name = cur.title ? ` · ${cur.title}` : "";
+  track(`solved/${cur.id}`, `Puzzle ${n} solved${name}`);
+  track(`solved/${cur.id}/time-${timeBucket(time)}`, `Puzzle ${n} solve time${name}`);
+  track(`solved/${cur.id}/hints-${hints === 0 ? "0" : hints === 1 ? "1" : "2-or-more"}`, `Puzzle ${n} hints used${name}`);
 }
 function bumpHints() {
   const prev = progress[cur.id] || {};
@@ -1286,7 +1288,7 @@ function showWin(revisit) {
   $("shareBtn").onclick = () => shareResult(shareInfo);
   $("reminderLink2").addEventListener("click", openReminder);
   showCommunity(cur, prog.time || 0, hints);
-  if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened`));
+  if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened · ${cur.title}`));
   $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
   if (next >= 0) $("winNext").onclick = () => { persist(); openPuzzle(next); };
 }

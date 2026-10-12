@@ -42,6 +42,7 @@
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; }
   body { font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg); overscroll-behavior: none; }
   button { font: inherit; color: inherit; cursor: pointer; }
@@ -81,7 +82,7 @@
   .community { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 14px; }
   .community[hidden] { display: none; }
   .community b.h { display: block; margin-bottom: 4px; }
-  .share-preview { width: 100%; border-radius: 12px; border: 1px solid var(--line); margin: 6px 0 4px; }
+  .share-preview { display: block; width: 100%; max-height: 36vh; object-fit: contain; border-radius: 12px; margin: 6px 0 4px; }
   .nextup b { color: var(--ink); }
   .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
   .btn { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 16px; }
@@ -247,9 +248,13 @@
     <h2>Share your result</h2>
     <img class="share-preview" id="sharePreview" alt="Your CRIGram result card">
     <div class="sub" id="shareText"></div>
-    <div class="actions">
+    <div class="actions" id="shareNative">
+      <button class="btn primary" id="shareLink">Share link…</button>
+      <button class="btn" id="shareImage">Share image…</button>
+    </div>
+    <div class="actions" style="margin-top:8px">
       <button class="btn" id="shareCopy">Copy text</button>
-      <a class="btn primary" id="shareDownload" download="crigram-result.png">Download image</a>
+      <a class="btn" id="shareDownload" download="crigram-result.png">Download image</a>
     </div>
     <div class="actions" style="margin-top:8px"><button class="btn" data-close>Close</button></div>
   </div>
@@ -823,7 +828,8 @@ let curIndex = -1;
 let cells = null;        // Uint8Array: 0 empty, 1 filled, 2 crossed
 let undoStack = [];
 let mode = 1;            // 1 fill, 2 cross
-let elapsed = 0, startedAt = 0, timerId = 0;
+let elapsed = 0, startedAt = 0, timerId = 0, lastAct = 0;
+const IDLE_MS = 60000;   // a pause between two moves counts for at most one minute
 let solved = false;
 let layout = null;
 let focusCell = -1;
@@ -856,9 +862,21 @@ function openPuzzle(i) {
   clearInterval(timerId);
   timerId = setInterval(updateMeta, 1000);
 }
-function currentTime() { return elapsed + (startedAt ? (Date.now() - startedAt) / 1000 : 0); }
-function startTimer() { if (!startedAt && !solved) startedAt = Date.now(); }
+// the timer measures active playing time: it stops when the window loses focus,
+// and a long break between two moves only counts for one minute
+function currentTime() { return elapsed + (startedAt ? Math.min(Date.now() - lastAct, IDLE_MS) / 1000 : 0); }
+function markActive() {
+  if (!startedAt) return;
+  const now = Date.now();
+  elapsed += Math.min(now - lastAct, IDLE_MS) / 1000;
+  lastAct = now;
+}
+function startTimer() {
+  if (solved) return;
+  if (!startedAt) { startedAt = lastAct = Date.now(); } else markActive();
+}
 function pauseTimer() { if (startedAt) { elapsed = currentTime(); startedAt = 0; } }
+window.addEventListener("blur", () => { if (cur) { pauseTimer(); persist(); } });
 function updateMeta() {
   if (!cur) return;
   const d = cur.difficulty;
@@ -1037,6 +1055,7 @@ function applyStroke(p) {
     else if (action === 0 ? v === target : v === 0) cells[i] = action;
   }
   focusCell = end.r * cur.width + end.c;
+  markActive();
   drawBoard();   // draw right away, so a tapped cell shows immediately on phones
 }
 function endStroke() {
@@ -1245,7 +1264,7 @@ function showWin(revisit) {
   $("winHome").onclick = leavePuzzle;
   // the share image is prepared right away, so the share menu opens instantly on tap
   const shareInfo = { n: curIndex + 1, time: prog.time || 0, hints, p: cur, file: null };
-  makeShareCard(shareInfo).then(file => { shareInfo.file = file; });
+  shareInfo.ready = makeShareCard(shareInfo).then(file => (shareInfo.file = file));
   $("shareBtn").onclick = () => shareResult(shareInfo);
   $("reminderLink2").addEventListener("click", openReminder);
   showCommunity(cur, prog.time || 0, hints);
@@ -1292,16 +1311,20 @@ function makeShareCard(info) {
 async function shareResult(info) {
   const text = shareText(info);
   track("share", "Result shared");
+  if (!info.file && info.ready) await info.ready;   // tapped before the card image was ready
   const file = info.file;
-  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], text, title: "CRIGram" }); return; }
+  const canFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+  // phones: one tap shares the card and the text together
+  if (window.matchMedia("(pointer: coarse)").matches && (canFile || navigator.share)) {
+    try { await navigator.share(canFile ? { files: [file], text, title: "CRIGram" } : { title: "CRIGram", text }); return; }
     catch (e) { if (e && e.name === "AbortError") return; }
   }
-  if (navigator.share) {
-    try { await navigator.share({ title: "CRIGram", text }); return; }
-    catch (e) { if (e && e.name === "AbortError") return; }
-  }
-  // no share menu (e.g. Firefox on a computer): show the card with copy and download buttons
+  // computers (where sharing an image usually drops the text) and browsers without a share menu:
+  // a window with separate choices for the link and the image
+  $("shareNative").hidden = !navigator.share;
+  $("shareImage").hidden = !canFile;
+  $("shareLink").onclick = async () => { try { await navigator.share({ title: "CRIGram", text }); } catch (e) { /* cancelled */ } };
+  $("shareImage").onclick = async () => { try { await navigator.share({ files: [file], title: "CRIGram" }); } catch (e) { /* cancelled */ } };
   $("shareText").textContent = text;
   if (file) {
     const url = URL.createObjectURL(file);

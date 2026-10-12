@@ -33,6 +33,12 @@ CRIGram was created by Jo Vandesompele (CRIG, Ghent University). The code was wr
 
 The puzzles are made with a companion tool, the CRIGram maker, which turns a figure into a grid, checks that the puzzle has exactly one solution that can be found by logic alone, and estimates its difficulty.
 
+## License
+
+- **Code** (the game, the CRIGram maker and their supporting files): [PolyForm Noncommercial License 1.0.0](LICENSE.md). You may use, change and share the code for noncommercial purposes, such as education, research and public outreach.
+- **Puzzles** (the grids, colours, titles and summaries in `crigram.json`): [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/), unless a puzzle states otherwise.
+- **Figures** from research papers keep their own license, shown with each puzzle after it is solved.
+
 ## Feedback
 
 Ideas, questions or a figure you would like to see as a puzzle? Use **Feedback & CRIG news** in the game.

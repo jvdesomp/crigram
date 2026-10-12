@@ -1255,7 +1255,7 @@ function showWin(revisit) {
   const research = researchHtml(s);
   $("story").innerHTML = `
     <div class="${pairClass}">
-      <figure><button class="pixbtn" id="winGrid" aria-label="View the grid"><img class="pix" src="${crigramImage(cur)}" alt="The solved CRIGram"></button><figcaption>Your CRIGram · <button class="link" id="winGrid2" style="font-size:12px;padding:0">view grid</button></figcaption></figure>
+      <figure><button class="pixbtn" id="winGrid" aria-label="View the grid"><img class="pix" src="${crigramImage(cur)}" alt="The solved CRIGram"></button><figcaption>Your CRIGram</figcaption></figure>
       ${cur.image ? `<figure><img src="${cur.image}" alt="The detail of the original figure"><figcaption>The original figure</figcaption></figure>` : ""}
     </div>
     ${layTitle ? `<div class="kicker">Puzzle: ${escapeHtml(cur.title)}</div>` : ""}
@@ -1287,7 +1287,7 @@ function showWin(revisit) {
   $("reminderLink2").addEventListener("click", openReminder);
   showCommunity(cur, prog.time || 0, hints);
   if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened`));
-  $("winGrid").onclick = $("winGrid2").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
+  $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
   if (next >= 0) $("winNext").onclick = () => { persist(); openPuzzle(next); };
 }
 $("resultBack").onclick = leavePuzzle;

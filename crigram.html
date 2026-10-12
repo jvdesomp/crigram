@@ -73,6 +73,15 @@
   .tag.new { background: #fcb033; color: #3a2600; }
   .tag.soon { background: var(--clue-bg); color: var(--muted); }
   .nextup { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+  .notice { display: flex; gap: 10px; align-items: flex-start; background: var(--blue-soft); color: var(--ink); border-radius: 12px; padding: 10px 12px; margin: 0 0 14px; font-size: 14px; }
+  .notice[hidden] { display: none; }
+  .notice span { flex: 1; }
+  .notice button { background: none; border: 0; font-size: 20px; line-height: 1; color: var(--muted); padding: 0 2px; }
+  .notice .link { font-size: 14px; padding: 0; }
+  .community { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 14px; }
+  .community[hidden] { display: none; }
+  .community b.h { display: block; margin-bottom: 4px; }
+  .share-preview { width: 100%; border-radius: 12px; border: 1px solid var(--line); margin: 6px 0 4px; }
   .nextup b { color: var(--ink); }
   .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
   .btn { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 16px; }
@@ -153,6 +162,7 @@
     <p>cell by cell, decoding our science</p>
   </div>
   <div class="wrap">
+    <div id="notice" class="notice" hidden role="status"><span id="noticeText"></span><button id="noticeClose" aria-label="Dismiss">×</button></div>
     <div id="nextUp" class="nextup" hidden></div>
     <div id="list" class="grid-list"></div>
     <div id="empty" class="empty" hidden>
@@ -166,6 +176,7 @@
     <div class="links">
       <button class="link" id="statsBtn">Your stats</button>
       <button class="link" id="howBtn">How to play</button>
+      <a class="link" id="reminderLink" href="crigram-weekly.ics">Weekly reminder</a>
       <button class="link" id="installBtn" hidden>Install app</button>
       <!-- only for opening the game as a local file on a computer, when testing -->
       <button class="link" id="loadBtn" hidden>Load puzzle file</button>
@@ -230,6 +241,18 @@
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
   </div>
 </div>
+<div class="sheet-bg" id="shareBg">
+  <div class="sheet">
+    <h2>Share your result</h2>
+    <img class="share-preview" id="sharePreview" alt="Your CRIGram result card">
+    <div class="sub" id="shareText"></div>
+    <div class="actions">
+      <button class="btn" id="shareCopy">Copy text</button>
+      <a class="btn primary" id="shareDownload" download="crigram-result.png">Download image</a>
+    </div>
+    <div class="actions" style="margin-top:8px"><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
 <div class="sheet-bg" id="howBg">
   <div class="sheet">
     <h2>How to play</h2>
@@ -241,7 +264,7 @@
       <li>Drag along a row or column to mark several cells at once. Tap a marked cell again to clear it.</li>
       <li>Every puzzle can be solved by logic alone. No guessing needed!</li>
       <li>Stuck? The bulb gives you a hint.</li>
-      <li>A new puzzle appears every Monday at 06:00 (Brussels time). Solve it within the week to keep your streak going.</li>
+      <li>A new puzzle appears every Monday at 06:00 (Brussels time). Solve it within the week to keep your streak going. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
     </ul>
     <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
@@ -669,14 +692,69 @@ function setPuzzles(data, persist) {
   renderHome();
   return true;
 }
+// ---------- messages to returning players ----------
+const VISIT_KEY = "crigram.lastVisit" + KEY_SUFFIX;
+let lastVisit = readJSON(VISIT_KEY, null), hiddenAt = 0, noticeShown = false;
+function markVisit() { writeJSON(VISIT_KEY, Date.now()); }
+function pickNotice(prevVisit) {
+  if (!puzzles.length) return null;
+  const now = Date.now(), DAY = 864e5;
+  const isSolved = p => progress[p.id] && progress[p.id].solved;
+  const unsolved = puzzles.filter(p => !isSolved(p) && (releaseTime(p) === null || releaseTime(p) <= now));
+  if (prevVisit === null) {
+    if (Object.keys(progress).length) return null;   // played before this feature existed
+    return 'Welcome to CRIGram! Every puzzle hides a figure from a CRIG paper. New to these puzzles? <button class="link" data-how>Read how to play</button>.';
+  }
+  const fresh = unsolved.filter(p => { const t = releaseTime(p); return t !== null && t > prevVisit && t <= now; });
+  if (now - prevVisit > 14 * DAY && unsolved.length >= 2) return `We missed you! <b>${unsolved.length} puzzles</b> are waiting for you.`;
+  if (fresh.length === 1) return `New since your last visit: <b>Puzzle ${puzzles.indexOf(fresh[0]) + 1}</b>.`;
+  if (fresh.length > 1) return `<b>${fresh.length} new puzzles</b> since your last visit.`;
+  // late in the week, warn about a streak that is about to end
+  const weekly = puzzles.filter(p => { const t = releaseTime(p); return t !== null && t <= now; });
+  const last = weekly[weekly.length - 1];
+  const wd = weekday(brusselsDate(now));
+  if (last && !isSolved(last) && now < releaseTime(last) + 7 * DAY && (wd === 5 || wd === 6 || wd === 0)) {
+    const st = streaks();
+    if (st.current >= 1) return `Your <b>${st.current}-week streak</b> is on the line: this week's puzzle is open until Monday 06:00.`;
+  }
+  return null;
+}
+function showNotice(prevVisit) {
+  let msg = pickNotice(prevVisit);
+  try { if (msg && sessionStorage.getItem("crigram.dismissed") === msg) msg = null; } catch (e) { /* ignore */ }
+  $("notice").hidden = !msg;
+  if (!msg) return;
+  $("noticeText").innerHTML = msg;
+  const how = $("noticeText").querySelector("[data-how]");
+  if (how) how.onclick = () => $("howBg").classList.add("show");
+}
+$("noticeClose").onclick = () => {
+  try { sessionStorage.setItem("crigram.dismissed", $("noticeText").innerHTML); } catch (e) { /* ignore */ }
+  $("notice").hidden = true;
+};
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { hiddenAt = Date.now(); markVisit(); return; }
+  // back after a long break (e.g. an installed app kept in memory): look for news again
+  if (hiddenAt && Date.now() - hiddenAt > 6 * 3600e3 && !cur) { showNotice(readJSON(VISIT_KEY, null)); markVisit(); }
+});
+$("reminderLink").addEventListener("click", () => track("reminder", "Weekly reminder added"));
+
 async function init() {
   try {
     const r = await fetch("crigram.json", { cache: "no-store" });
-    if (r.ok && setPuzzles(await r.json(), false)) return;
+    if (r.ok && setPuzzles(await r.json(), false)) { afterLoad(); return; }
   } catch (e) { /* opened as a local file: fall back to stored or picked puzzles */ }
   const stored = readJSON(PUZZLES_KEY, null);
   if (stored && stored.length) setPuzzles(stored, false);
   else renderHome();
+  afterLoad();
+}
+// shows a message once the puzzles are known, then remembers this visit
+function afterLoad() {
+  if (noticeShown) return;
+  noticeShown = true;
+  showNotice(lastVisit);
+  markVisit();
 }
 function pickFile() { $("fileInput").click(); }
 $("openFileBtn").onclick = pickFile;
@@ -1016,6 +1094,7 @@ function recordSolve() {
     ? { ...prev, best: Math.min(prev.best, time), solves: (prev.solves || 1) + 1, last: now }
     : { first: now, last: now, time, hints, best: time, solves: 1 };
   saveStats();
+  if (prev) return;   // only the first solve counts in the shared statistics
   const n = curIndex + 1;
   track(`solved/${cur.id}`, `Puzzle ${n} solved`);
   track(`solved/${cur.id}/time-${timeBucket(time)}`, `Puzzle ${n} solve time`);
@@ -1114,7 +1193,9 @@ function showWin(revisit) {
     <h2 style="margin-top:${layTitle ? 2 : 12}px">${escapeHtml(layTitle || cur.title)}</h2>
     <div class="summary">${paragraphs(cur.laySummary || cur.description)}</div>
     ${paperLink(s) ? `<a class="btn primary paper-btn" id="paperBtn" href="${escapeHtml(paperLink(s))}" target="_blank" rel="noopener">Read the paper ↗</a>` : ""}
+    <div class="community" id="community" hidden></div>
     <button class="btn paper-btn" id="shareBtn" style="width:100%">Share your result</button>
+    <p style="text-align:center;margin:10px 0 0"><a class="link" id="reminderLink2" href="crigram-weekly.ics">Remind me every Monday</a></p>
     ${citation(s) ? `<div class="cite">${citation(s)}</div>` : ""}
     <div class="actions">
       ${next >= 0 ? '<button class="btn primary" id="winNext">Next puzzle</button>' : ""}
@@ -1125,7 +1206,12 @@ function showWin(revisit) {
   showScreen("result");
   window.scrollTo(0, 0);
   $("winHome").onclick = leavePuzzle;
-  $("shareBtn").onclick = () => shareResult(curIndex + 1, prog.time || 0, hints);
+  // the share image is prepared right away, so the share menu opens instantly on tap
+  const shareInfo = { n: curIndex + 1, time: prog.time || 0, hints, p: cur, file: null };
+  makeShareCard(shareInfo).then(file => { shareInfo.file = file; });
+  $("shareBtn").onclick = () => shareResult(shareInfo);
+  $("reminderLink2").addEventListener("click", () => track("reminder", "Weekly reminder added"));
+  showCommunity(cur, prog.time || 0, hints);
   if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened`));
   $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
   if (next >= 0) $("winNext").onclick = () => { persist(); openPuzzle(next); };
@@ -1134,15 +1220,109 @@ $("resultBack").onclick = leavePuzzle;
 
 // ---------- sharing ----------
 function gameUrl() { return location.href.split("#")[0].split("?")[0].replace(/[^/]*$/, ""); }
-async function shareResult(n, time, hints) {
-  const text = `I decoded CRIGram #${n} in ${fmtTime(time)}${hints ? ` with ${hints} hint${hints > 1 ? "s" : ""}` : " without hints"} 🧬 Cell by cell, decoding our science.`;
-  const url = gameUrl();
+function shareText(info) {
+  const { n, time, hints } = info;
+  return `I decoded CRIGram #${n} in ${fmtTime(time)}${hints ? ` with ${hints} hint${hints > 1 ? "s" : ""}` : " without hints"} 🧬 Can you crack it? ${gameUrl()}`;
+}
+// a spoiler-free result card: number, time, hints, difficulty, but not the picture
+function makeShareCard(info) {
+  const S = 1080, c = document.createElement("canvas");
+  c.width = S; c.height = S;
+  const x = c.getContext("2d"), font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  x.fillStyle = "#ffffff"; x.fillRect(0, 0, S, S);
+  x.fillStyle = "#0079c1"; x.fillRect(0, 0, S, 300);
+  CRIG_COLORS.slice(1).forEach((col, i) => { x.fillStyle = col; x.fillRect(i * S / 6, 300, S / 6 + 1, 18); });
+  x.textAlign = "center"; x.fillStyle = "#ffffff";
+  x.font = `800 120px ${font}`; x.fillText("CRIGram", S / 2, 165);
+  x.font = `400 40px ${font}`; x.fillText("cell by cell, decoding our science", S / 2, 240);
+  // decorative "C" mosaic, the same as the app icon
+  const C = [".XXXX", "XX...", "X....", "XX...", ".XXXX"], cell = 46, gx = S / 2 - 2.5 * cell, gy = 370;
+  let k = 0;
+  C.forEach((row, r) => [...row].forEach((ch, col) => {
+    x.fillStyle = ch === "X" ? CRIG_COLORS[[0, 3, 4, 1, 6, 2, 5][k++ % 7]] : "#e4e8ef";
+    x.fillRect(gx + col * cell + 2, gy + r * cell + 2, cell - 4, cell - 4);
+  }));
+  x.fillStyle = "#1b2233";
+  x.font = `800 96px ${font}`; x.fillText(`#${info.n} decoded`, S / 2, 740);
+  x.font = `500 52px ${font}`; x.fillStyle = "#3b4457";
+  x.fillText(`in ${fmtTime(info.time)} · ${info.hints ? info.hints + " hint" + (info.hints > 1 ? "s" : "") : "no hints"}`, S / 2, 820);
+  const d = info.p.difficulty;
+  if (d && d.stars) { x.font = `400 48px ${font}`; x.fillStyle = "#fcb033"; x.fillText("★".repeat(d.stars) + "☆".repeat(4 - d.stars), S / 2, 892); }
+  x.fillStyle = "#0079c1"; x.font = `700 46px ${font}`; x.fillText("Can you crack it?", S / 2, 985);
+  x.fillStyle = "#677086"; x.font = `400 36px ${font}`; x.fillText(gameUrl().replace(/^https?:\/\//, "").replace(/\/$/, ""), S / 2, 1040);
+  return new Promise(resolve => c.toBlob(b => resolve(b ? new File([b], `crigram-${info.n}.png`, { type: "image/png" }) : null), "image/png"));
+}
+async function shareResult(info) {
+  const text = shareText(info);
   track("share", "Result shared");
-  if (navigator.share) {
-    try { await navigator.share({ title: "CRIGram", text, url }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+  const file = info.file;
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], text, title: "CRIGram" }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
   }
-  try { await navigator.clipboard.writeText(`${text} ${url}`); toast("Copied! Paste it in a message or post."); }
-  catch (e) { prompt("Copy this text:", `${text} ${url}`); }
+  if (navigator.share) {
+    try { await navigator.share({ title: "CRIGram", text }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  // no share menu (e.g. Firefox on a computer): show the card with copy and download buttons
+  $("shareText").textContent = text;
+  if (file) {
+    const url = URL.createObjectURL(file);
+    $("sharePreview").src = url; $("shareDownload").href = url; $("shareDownload").hidden = false; $("sharePreview").hidden = false;
+  } else { $("shareDownload").hidden = true; $("sharePreview").hidden = true; }
+  $("shareCopy").onclick = async () => {
+    try { await navigator.clipboard.writeText(text); toast("Copied! Paste it in a message or post."); }
+    catch (e) { prompt("Copy this text:", text); }
+  };
+  $("shareBg").classList.add("show");
+}
+
+// ---------- community statistics (read from GoatCounter, when its public counts are enabled) ----------
+const BUCKETS = [
+  ["under-1-min", "less than a minute"], ["1-2-min", "1 to 2 minutes"], ["2-5-min", "2 to 5 minutes"],
+  ["5-10-min", "5 to 10 minutes"], ["10-20-min", "10 to 20 minutes"], ["over-20-min", "more than 20 minutes"],
+];
+async function gcCount(path) {
+  // returns a number, 0 when nobody has done it yet, or null when the counts cannot be read
+  for (const p of [path, "/" + path]) {
+    try {
+      const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 5000);
+      const r = await fetch(`https://${CONFIG.goatcounter}.goatcounter.com/counter/${encodeURIComponent(p)}.json`, { signal: ctl.signal });
+      clearTimeout(timer);
+      if (r.ok) { const j = await r.json(); return parseInt(String(j.count).replace(/[^0-9]/g, ""), 10) || 0; }
+      if (r.status !== 404) return null;
+    } catch (e) { return null; }
+  }
+  return 0;
+}
+async function showCommunity(p, myTime, myHints) {
+  const box = $("community");
+  if (!CONFIG.goatcounter || !/^https?:/.test(location.protocol)) return;
+  const solved = await gcCount(`solved/${p.id}`);
+  if (solved === null || cur !== p) return;
+  const myBucket = BUCKETS.find(b => b[0] === timeBucket(myTime));
+  let html = '<b class="h">All players</b>';
+  if (solved < 3) {
+    html += solved ? `Solved by ${solved} player${solved === 1 ? "" : "s"} so far. You're one of the first!` : "You're one of the very first players to solve this one!";
+  } else {
+    const [times, hints] = await Promise.all([
+      Promise.all(BUCKETS.map(b => gcCount(`solved/${p.id}/time-${b[0]}`))),
+      Promise.all(["0", "1", "2-or-more"].map(h => gcCount(`solved/${p.id}/hints-${h}`))),
+    ]);
+    if (cur !== p) return;
+    html += `Solved by <b>${solved.toLocaleString("en-GB")}</b> players.`;
+    const tTotal = times.reduce((a, b) => a + (b || 0), 0);
+    if (tTotal >= 3) {
+      let acc = 0, mid = 0;
+      for (let i = 0; i < times.length; i++) { acc += times[i] || 0; if (acc >= tTotal / 2) { mid = i; break; } }
+      html += ` Most needed <b>${BUCKETS[mid][1]}</b>` + (myBucket ? `; you: ${myBucket[1]}.` : ".");
+    }
+    const hTotal = hints.reduce((a, b) => a + (b || 0), 0);
+    if (hTotal >= 3) html += ` <b>${Math.round(100 * (hints[0] || 0) / hTotal)} %</b> solved it without hints.`;
+  }
+  html += '<br><small style="color:var(--muted)">Updated every few hours.</small>';
+  box.innerHTML = html;
+  box.hidden = false;
 }
 
 // ---------- personal stats page ----------

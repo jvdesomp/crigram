@@ -79,6 +79,20 @@
   .notice span { flex: 1; }
   .notice button { background: none; border: 0; font-size: 20px; line-height: 1; color: var(--muted); padding: 0 2px; }
   .notice .link { font-size: 14px; padding: 0; }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 16px; font-size: 14px; }
+  .box-title { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; letter-spacing: .3px; }
+  .box .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .paper-link { display: inline-block; margin-top: 8px; font-weight: 600; color: var(--blue); text-decoration: none; }
+  .result-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .result-row .solved { font-weight: 600; color: var(--ok); }
+  .btn.slim { padding: 6px 14px; font-size: 14px; }
+  .community-line { margin-top: 6px; color: var(--ink); }
+  .community-line small { color: var(--muted); }
+  .pixbtn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+  .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; margin-top: 16px; }
+  .footer-links .link { color: var(--muted); font-size: 13px; }
+  .btn.wide { display: block; width: 100%; margin-top: 18px; }
+  .done-note { text-align: center; color: var(--muted); font-size: 14px; margin-top: 18px; }
   .community { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 14px; }
   .community[hidden] { display: none; }
   .community b.h { display: block; margin-bottom: 4px; }
@@ -122,8 +136,6 @@
   .sheet h2 { margin: 0 0 4px; font-size: 22px; }
   .sheet .sub { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
   .sheet img { width: 100%; border-radius: 10px; margin: 6px 0 10px; background: #fff; }
-  .cite { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
-  .cite a { color: var(--blue); }
   .sheet .actions { display: flex; gap: 10px; margin-top: 16px; }
   .sheet .actions .btn { flex: 1; }
   .rules li { margin-bottom: 6px; }
@@ -1187,19 +1199,19 @@ function checkWin() {
   requestAnimationFrame(anim);
   setTimeout(() => { if (cur === p) { revealAlpha = cur.image ? 1 : 0; drawBoard(); showWin(); } }, 2100);
 }
-function citation(s) {
+// the source of the figure as one card: citation, DOI and licence, and a link to the paper
+function researchHtml(s) {
   const parts = [];
   if (s.authors) parts.push(escapeHtml(s.authors) + (s.year ? ` (${escapeHtml(s.year)})` : ""));
   else if (s.year) parts.push(escapeHtml(s.year));
   if (s.article) parts.push(`<i>${escapeHtml(s.article)}</i>`);
   if (s.journal) parts.push(escapeHtml(s.journal));
-  let html = parts.join(". ");
-  if (html) html += ".";
   const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
-  if (doi) html += ` <a href="https://doi.org/${encodeURI(doi)}" target="_blank" rel="noopener">doi:${escapeHtml(doi)}</a>`;
-  else if (s.url && /^https?:\/\//i.test(s.url)) html += ` <a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">link</a>`;
-  if (s.license && !/^(to be checked|onbekend)$/i.test(s.license)) html += `<br>Figure license: ${escapeHtml(s.license)}`;
-  return html;
+  const meta = [doi ? `doi:${escapeHtml(doi)}` : "", s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? `figure licence ${escapeHtml(s.license)}` : ""].filter(Boolean).join(" · ");
+  const link = paperLink(s);
+  if (!parts.length && !meta && !link) return "";
+  return (parts.length ? `<div>${parts.join(". ")}.</div>` : "") + (meta ? `<div class="meta">${meta}</div>` : "") +
+    (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">Read the paper ↗</a>` : "");
 }
 function paperLink(s) {
   const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
@@ -1240,26 +1252,31 @@ function showWin(revisit) {
   const layTitle = cur.layTitle || cur.headline || "";
   $("rTitle").textContent = revisit ? cur.title : "Solved!";
   $("rMeta").textContent = `${cur.width} × ${cur.height}` + (cur.difficulty ? ` · ${cur.difficulty.label} ${stars(cur)}` : "");
+  const research = researchHtml(s);
   $("story").innerHTML = `
     <div class="${pairClass}">
-      <figure><img class="pix" src="${crigramImage(cur)}" alt="The solved CRIGram"><figcaption>Your CRIGram</figcaption></figure>
+      <figure><button class="pixbtn" id="winGrid" aria-label="View the grid"><img class="pix" src="${crigramImage(cur)}" alt="The solved CRIGram"></button><figcaption>Your CRIGram · <button class="link" id="winGrid2" style="font-size:12px;padding:0">view grid</button></figcaption></figure>
       ${cur.image ? `<figure><img src="${cur.image}" alt="The detail of the original figure"><figcaption>The original figure</figcaption></figure>` : ""}
     </div>
-    <div class="solved-chip">✓ Solved in ${fmtTime(prog.time || 0)} · ${hints ? `${hints} hint${hints > 1 ? "s" : ""}` : "no hints"}</div>
     ${layTitle ? `<div class="kicker">Puzzle: ${escapeHtml(cur.title)}</div>` : ""}
-    <h2 style="margin-top:${layTitle ? 2 : 12}px">${escapeHtml(layTitle || cur.title)}</h2>
+    <h2 style="margin-top:${layTitle ? 2 : 14}px">${escapeHtml(layTitle || cur.title)}</h2>
     <div class="summary">${paragraphs(cur.laySummary || cur.description)}</div>
-    ${paperLink(s) ? `<a class="btn primary paper-btn" id="paperBtn" href="${escapeHtml(paperLink(s))}" target="_blank" rel="noopener">Read the paper ↗</a>` : ""}
-    <div class="community" id="community" hidden></div>
-    <button class="btn paper-btn" id="shareBtn" style="width:100%">Share your result</button>
-    <p style="text-align:center;margin:10px 0 0"><button class="link" id="reminderLink2">Remind me every Monday</button></p>
-    ${citation(s) ? `<div class="cite">${citation(s)}</div>` : ""}
-    <div class="actions">
-      ${next >= 0 ? '<button class="btn primary" id="winNext">Next puzzle</button>' : ""}
-      <button class="btn" id="winGrid">View the grid</button>
-      <button class="btn" id="winHome">All puzzles</button>
-    </div>
-    ${CONFIG.feedbackUrl ? `<p style="text-align:center;margin-top:16px"><a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">Feedback &amp; CRIG news</a></p>` : ""}`;
+    ${research ? `<section class="box"><div class="box-title">The research</div>${research}</section>` : ""}
+    <section class="box">
+      <div class="box-title">Your result</div>
+      <div class="result-row">
+        <span class="solved">✓ Solved in ${fmtTime(prog.time || 0)} · ${hints ? `${hints} hint${hints > 1 ? "s" : ""}` : "no hints"}</span>
+        <button class="btn slim" id="shareBtn">Share</button>
+      </div>
+      <div class="community-line" id="community" hidden></div>
+    </section>
+    ${next >= 0 ? '<button class="btn primary wide" id="winNext">Next puzzle</button>'
+      : `<p class="done-note">You've solved all puzzles${nextRelease ? `. The next one arrives ${whenText(nextRelease).abs}` : ""}.</p>`}
+    <nav class="footer-links">
+      <button class="link" id="winHome">All puzzles</button>
+      <button class="link" id="reminderLink2">Weekly reminder</button>
+      ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">Feedback &amp; CRIG news</a>` : ""}
+    </nav>`;
   showScreen("result");
   window.scrollTo(0, 0);
   $("winHome").onclick = leavePuzzle;
@@ -1270,7 +1287,7 @@ function showWin(revisit) {
   $("reminderLink2").addEventListener("click", openReminder);
   showCommunity(cur, prog.time || 0, hints);
   if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened`));
-  $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
+  $("winGrid").onclick = $("winGrid2").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
   if (next >= 0) $("winNext").onclick = () => { persist(); openPuzzle(next); };
 }
 $("resultBack").onclick = leavePuzzle;
@@ -1362,9 +1379,9 @@ async function showCommunity(p, myTime, myHints) {
   const solved = await gcCount(`solved/${p.id}`);
   if (solved === null || cur !== p) return;
   const myBucket = BUCKETS.find(b => b[0] === timeBucket(myTime));
-  let html = '<b class="h">All players</b>';
+  let html = "";
   if (solved < 3) {
-    html += solved ? `Solved by ${solved} player${solved === 1 ? "" : "s"} so far. You're one of the first!` : "You're one of the very first players to solve this one!";
+    html += solved ? `Solved by ${solved} player${solved === 1 ? "" : "s"} so far: you're one of the first!` : "You're one of the very first players to solve this one!";
   } else {
     const [times, hints] = await Promise.all([
       Promise.all(BUCKETS.map(b => gcCount(`solved/${p.id}/time-${b[0]}`))),
@@ -1381,7 +1398,7 @@ async function showCommunity(p, myTime, myHints) {
     const hTotal = hints.reduce((a, b) => a + (b || 0), 0);
     if (hTotal >= 3) html += ` <b>${Math.round(100 * (hints[0] || 0) / hTotal)} %</b> solved it without hints.`;
   }
-  html += '<br><small style="color:var(--muted)">Updated every few hours.</small>';
+  html += ' <small>(all players, updated every few hours)</small>';
   box.innerHTML = html;
   box.hidden = false;
 }

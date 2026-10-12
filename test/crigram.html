@@ -88,7 +88,8 @@
   .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
   .links { display: flex; gap: 16px; justify-content: center; margin: 22px 0 8px; flex-wrap: wrap; }
   .link { background: none; border: 0; color: var(--blue); padding: 4px; font-size: 14px; text-decoration: none; }
-  a.btn { display: inline-block; text-decoration: none; text-align: center; }
+  a.btn { display: inline-block; text-decoration: none; text-align: center; color: var(--ink); }
+  a.btn.primary { color: #fff; }
   .feedback-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 18px; font-size: 14px; }
   .feedback-card span { color: var(--muted); }
   .feedback-card[hidden] { display: none; }
@@ -176,7 +177,7 @@
     <div class="links">
       <button class="link" id="statsBtn">Your stats</button>
       <button class="link" id="howBtn">How to play</button>
-      <a class="link" id="reminderLink" href="crigram-weekly.ics">Weekly reminder</a>
+      <button class="link" id="reminderLink">Weekly reminder</button>
       <button class="link" id="installBtn" hidden>Install app</button>
       <!-- only for opening the game as a local file on a computer, when testing -->
       <button class="link" id="loadBtn" hidden>Load puzzle file</button>
@@ -251,6 +252,19 @@
       <a class="btn primary" id="shareDownload" download="crigram-result.png">Download image</a>
     </div>
     <div class="actions" style="margin-top:8px"><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
+<div class="sheet-bg" id="reminderBg">
+  <div class="sheet">
+    <h2>Weekly reminder</h2>
+    <div class="sub">Get a reminder in your calendar every Monday at 08:00, when the new puzzle is ready. You can change the time in your calendar afterwards.</div>
+    <div class="actions" style="flex-direction:column">
+      <a class="btn primary" id="remApple">Apple Calendar (iPhone, iPad, Mac)</a>
+      <a class="btn" id="remGoogle" target="_blank" rel="noopener">Google Calendar</a>
+      <a class="btn" id="remFile" href="crigram-weekly.ics" download="crigram-weekly.ics">Other calendars (download file)</a>
+    </div>
+    <p class="sub" style="margin-top:12px">On a Mac, Calendar asks how to subscribe: untick <b>Remove alerts</b> if you want a notification.</p>
+    <div class="actions" style="margin-top:4px"><button class="btn" data-close>Close</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="howBg">
@@ -692,6 +706,28 @@ function setPuzzles(data, persist) {
   renderHome();
   return true;
 }
+// ---------- weekly calendar reminder ----------
+function openReminder() {
+  const base = gameUrl();
+  // Apple: subscribe through webcal://, so no file is downloaded (macOS blocks downloaded calendar files)
+  $("remApple").href = base.replace(/^https?:/, "webcal:") + "crigram-weekly.ics";
+  const first = nextMonday().replace(/-/g, "");
+  const q = new URLSearchParams({
+    action: "TEMPLATE",
+    text: "New CRIGram puzzle",
+    dates: `${first}T080000/${first}T081500`,
+    ctz: "Europe/Brussels",
+    recur: "RRULE:FREQ=WEEKLY;BYDAY=MO",
+    details: `A new CRIGram puzzle is ready: cell by cell, decoding our science.\n${base}`,
+  });
+  $("remGoogle").href = "https://calendar.google.com/calendar/render?" + q.toString();
+  $("reminderBg").classList.add("show");
+}
+["remApple", "remGoogle", "remFile"].forEach(id => $(id).addEventListener("click", () => {
+  track("reminder", "Weekly reminder added");
+  setTimeout(() => $("reminderBg").classList.remove("show"), 300);
+}));
+
 // ---------- messages to returning players ----------
 const VISIT_KEY = "crigram.lastVisit" + KEY_SUFFIX;
 let lastVisit = readJSON(VISIT_KEY, null), hiddenAt = 0, noticeShown = false;
@@ -737,7 +773,7 @@ document.addEventListener("visibilitychange", () => {
   // back after a long break (e.g. an installed app kept in memory): look for news again
   if (hiddenAt && Date.now() - hiddenAt > 6 * 3600e3 && !cur) { showNotice(readJSON(VISIT_KEY, null)); markVisit(); }
 });
-$("reminderLink").addEventListener("click", () => track("reminder", "Weekly reminder added"));
+$("reminderLink").addEventListener("click", openReminder);
 
 async function init() {
   try {
@@ -1195,7 +1231,7 @@ function showWin(revisit) {
     ${paperLink(s) ? `<a class="btn primary paper-btn" id="paperBtn" href="${escapeHtml(paperLink(s))}" target="_blank" rel="noopener">Read the paper ↗</a>` : ""}
     <div class="community" id="community" hidden></div>
     <button class="btn paper-btn" id="shareBtn" style="width:100%">Share your result</button>
-    <p style="text-align:center;margin:10px 0 0"><a class="link" id="reminderLink2" href="crigram-weekly.ics">Remind me every Monday</a></p>
+    <p style="text-align:center;margin:10px 0 0"><button class="link" id="reminderLink2">Remind me every Monday</button></p>
     ${citation(s) ? `<div class="cite">${citation(s)}</div>` : ""}
     <div class="actions">
       ${next >= 0 ? '<button class="btn primary" id="winNext">Next puzzle</button>' : ""}
@@ -1210,7 +1246,7 @@ function showWin(revisit) {
   const shareInfo = { n: curIndex + 1, time: prog.time || 0, hints, p: cur, file: null };
   makeShareCard(shareInfo).then(file => { shareInfo.file = file; });
   $("shareBtn").onclick = () => shareResult(shareInfo);
-  $("reminderLink2").addEventListener("click", () => track("reminder", "Weekly reminder added"));
+  $("reminderLink2").addEventListener("click", openReminder);
   showCommunity(cur, prog.time || 0, hints);
   if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened`));
   $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };

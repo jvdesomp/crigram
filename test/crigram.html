@@ -1220,6 +1220,20 @@ function researchHtml(s) {
   return (parts.length ? `<div>${parts.join(". ")}.</div>` : "") + (meta ? `<div class="meta">${meta}</div>` : "") +
     (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">Read the paper ↗</a>` : "");
 }
+function licenceLine(s, withImage) {
+  const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
+  const plUrl = { "CC BY-NC-SA 4.0": "by-nc-sa", "CC BY-NC 4.0": "by-nc", "CC BY-SA 4.0": "by-sa", "CC BY 4.0": "by" }[pl];
+  const own = /^(own work|to be checked|onbekend)$/i.test(s.license || "");
+  return [
+    withImage && s.license && !own ? `image licence ${escapeHtml(s.license)}` : "",
+    plUrl ? `puzzle licence <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle licence ${escapeHtml(pl)}`,
+  ].filter(Boolean).join(" · ");
+}
+function aboutHtml(s) {
+  const link = s.url && /^https?:\/\//i.test(s.url) ? s.url : "";
+  return `<div class="meta">${licenceLine(s, !!cur.image)}</div>` +
+    (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">Read more ↗</a>` : "");
+}
 function paperLink(s) {
   const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
   if (doi) return "https://doi.org/" + encodeURI(doi);
@@ -1259,16 +1273,17 @@ function showWin(revisit) {
   const layTitle = cur.layTitle || cur.headline || "";
   $("rTitle").textContent = revisit ? cur.title : "Solved!";
   $("rMeta").textContent = `${cur.width} × ${cur.height}` + (cur.difficulty ? ` · ${cur.difficulty.label} ${stars(cur)}` : "");
-  const research = researchHtml(s);
+  const isFree = cur.kind === "free";
+  const research = isFree ? aboutHtml(s) : researchHtml(s);
   $("story").innerHTML = `
     <div class="${pairClass}">
       <figure><button class="pixbtn" id="winGrid" aria-label="View the grid"><img class="pix" src="${crigramImage(cur)}" alt="The solved CRIGram"></button><figcaption>Your CRIGram</figcaption></figure>
-      ${cur.image ? `<figure><img src="${cur.image}" alt="The detail of the original figure"><figcaption>The original figure</figcaption></figure>` : ""}
+      ${cur.image ? `<figure><img src="${cur.image}" alt="${isFree ? "The original image" : "The detail of the original figure"}"><figcaption>${isFree ? "The original image" : "The original figure"}</figcaption></figure>` : ""}
     </div>
     ${layTitle ? `<div class="kicker">Puzzle: ${escapeHtml(cur.title)}</div>` : ""}
     <h2 style="margin-top:${layTitle ? 2 : 14}px">${escapeHtml(layTitle || cur.title)}</h2>
     <div class="summary">${paragraphs(cur.laySummary || cur.description)}</div>
-    ${research ? `<section class="box"><div class="box-title">The research</div>${research}</section>` : ""}
+    ${research ? `<section class="box"><div class="box-title">${isFree ? "About this puzzle" : "The research"}</div>${research}</section>` : ""}
     <section class="box">
       <div class="box-title">Your result</div>
       <div class="result-row">
@@ -1293,7 +1308,9 @@ function showWin(revisit) {
   $("shareBtn").onclick = () => shareResult(shareInfo);
   $("reminderLink2").addEventListener("click", openReminder);
   showCommunity(cur, prog.time || 0, hints);
-  if ($("paperBtn")) $("paperBtn").addEventListener("click", () => track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened · ${cur.title}`));
+  if ($("paperBtn")) $("paperBtn").addEventListener("click", () => isFree
+    ? track(`link/${cur.id}`, `Puzzle ${curIndex + 1} link opened · ${cur.title}`)
+    : track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened · ${cur.title}`));
   $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
   if (next >= 0) $("winNext").onclick = () => { persist(); openPuzzle(next); };
 }

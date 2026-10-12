@@ -231,7 +231,7 @@
     <div class="title"><b>Your stats</b><small>stored on this device only</small></div>
   </div>
   <div class="wrap" id="statsBody"></div>
-  <div class="wrap" style="padding-top:0;text-align:center"><button class="link" id="resetBtn" style="color:var(--muted)">Reset progress and stats</button></div>
+  <div class="wrap" id="resetRow" style="padding-top:0;text-align:center" hidden><button class="link" id="resetBtn" style="color:var(--muted)">Reset progress and stats</button></div>
 </section>
 <div class="sheet-bg" id="installBg">
   <div class="sheet">
@@ -796,6 +796,7 @@ function pickFile() { $("fileInput").click(); }
 $("openFileBtn").onclick = pickFile;
 $("loadBtn").onclick = pickFile;
 $("loadBtn").hidden = /^https?:/.test(location.protocol);
+$("resetRow").hidden = !IS_TEST;   // a full reset is only offered on the test site
 $("fileInput").onchange = e => {
   const f = e.target.files[0];
   if (!f) return;

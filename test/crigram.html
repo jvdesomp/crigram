@@ -120,6 +120,8 @@
   .bar .title small { color: var(--muted); font-size: 12px; }
   .icon { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; padding: 0; font-size: 18px; }
   .icon svg { width: 20px; height: 20px; }
+  .icon.zoom { width: 44px; height: 44px; border-radius: 12px; }
+  .icon:disabled { opacity: .35; }
   .icon[hidden] { display: none; }
   .paper-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; text-decoration: none; }
   #boardWrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 10px 8px; overflow: auto; }
@@ -224,10 +226,16 @@
   </div>
   <div id="boardWrap"><canvas id="board"></canvas></div>
   <div class="tools">
+    <button class="icon zoom" id="zoomOut" aria-label="Zoom out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+    </button>
     <div class="mode" role="group" aria-label="Tool">
       <button id="modeFill" class="on"><span class="swatch"></span>Fill</button>
       <button id="modeCross"><span class="xmark"></span>Blank</button>
     </div>
+    <button class="icon zoom" id="zoomIn" aria-label="Zoom in">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg>
+    </button>
   </div>
 </section>
 
@@ -298,6 +306,7 @@
       <li>Use <b>Fill</b> to colour cells and <b>Blank</b> to turn cells white when you know they stay empty. Grey cells are still undecided.</li>
       <li>Drag along a row or column to mark several cells at once. Tap a marked cell again to clear it.</li>
       <li>Every puzzle can be solved by logic alone. No guessing needed!</li>
+      <li>Cells too small? Use <b>+</b> and <b>−</b> to zoom. Drag along the clue numbers (or with two fingers) to move around; the mini-map in the corner shows where you are.</li>
       <li>Stuck? The bulb gives you a hint.</li>
       <li>A new puzzle appears every Monday at 06:00 (Brussels time). Solve it within the week to keep your streak going. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
     </ul>
@@ -976,6 +985,7 @@ function openPuzzle(i) {
   updateMeta();
   setMode(1);
   showScreen("play");
+  zoom = 1; view = { x: 0, y: 0 };
   sizeBoard(); drawBoard();
   if (solved) showWin(true);
   else window.scrollTo(0, 0);
@@ -1035,10 +1045,16 @@ document.addEventListener("keydown", e => {
   if (e.key === "f" || e.key === "1") setMode(1);
   if (e.key === "x" || e.key === "2") setMode(2);
   if ((e.metaKey || e.ctrlKey) && e.key === "z") { e.preventDefault(); undo(); }
+  if (!e.metaKey && !e.ctrlKey && (e.key === "+" || e.key === "=")) setZoom(zoom * 1.5);
+  if (!e.metaKey && !e.ctrlKey && e.key === "-") setZoom(zoom / 1.5);
 });
 
 // layout and drawing
+// zoom: 1 = the whole grid fits; with + and - (or pinching) cells get bigger and the grid scrolls,
+// while the clue numbers stay pinned to the edges and a mini-map in the corner shows the whole grid
 const board = $("board");
+let zoom = 1;
+let view = { x: 0, y: 0 };   // scroll position inside the grid, in px
 function sizeBoard() {
   if (!cur) return;
   const W = cur.width, H = cur.height;
@@ -1047,16 +1063,61 @@ function sizeBoard() {
   const wrap = $("boardWrap");
   const availW = wrap.clientWidth - 16, availH = wrap.clientHeight - 20;
   const f = 0.72;
-  let cs = Math.floor(Math.min(availW / (W + maxR * f + 0.3), availH / (H + maxC * f + 0.3), 44));
-  cs = Math.max(cs, 13);
-  const slot = cs * f;
-  const left = Math.ceil(maxR * slot + cs * 0.3), top = Math.ceil(maxC * slot + cs * 0.3);
-  const tw = left + W * cs + 2, th = top + H * cs + 2;
+  const margins = c => { const s = Math.min(c * f, 22), p = Math.min(c * 0.3, 8); return [Math.ceil(maxR * s + p), Math.ceil(maxC * s + p)]; };
+  let fit = Math.floor(Math.min(availW / (W + maxR * f + 0.3), availH / (H + maxC * f + 0.3), 44));
+  // make sure the whole grid really fits at zoom 1, after rounding the clue margins
+  while (fit > 13) {
+    const [l, tp] = margins(fit);
+    if (l + W * fit + 2 <= availW && tp + H * fit + 2 <= availH) break;
+    fit--;
+  }
+  fit = Math.max(fit, 13);
+  const zMax = Math.max(1, Math.min(3.5, 48 / fit));
+  zoom = Math.min(Math.max(zoom, 1), zMax);
+  const cs = Math.round(fit * zoom);
+  const slot = Math.min(cs * f, 22), fs = Math.max(9, Math.round(slot * 0.69)), pad = Math.min(cs * 0.3, 8);
+  const left = Math.ceil(maxR * slot + pad), top = Math.ceil(maxC * slot + pad);
+  const gw = W * cs, gh = H * cs;
+  const vw = Math.max(cs, Math.min(gw, availW - left - 2)), vh = Math.max(cs, Math.min(gh, availH - top - 2));
+  view.x = Math.min(Math.max(view.x, 0), gw - vw);
+  view.y = Math.min(Math.max(view.y, 0), gh - vh);
+  const tw = left + vw + 2, th = top + vh + 2;
   const dpr = window.devicePixelRatio || 1;
   board.style.width = tw + "px"; board.style.height = th + "px";
   board.width = Math.round(tw * dpr); board.height = Math.round(th * dpr);
-  layout = { left, top, cs, slot, tw, th, dpr };
+  layout = { left, top, cs, slot, fs, pad, tw, th, dpr, vw, vh, gw, gh, zMax };
+  $("zoomIn").disabled = zoom >= zMax - 0.01;
+  $("zoomOut").disabled = zoom <= 1.001;
 }
+// zooms while keeping the grid point under (px, py) on the board in place
+function setZoom(z, px, py) {
+  if (!layout) return;
+  const { left, top, cs } = layout;
+  if (px === undefined) { px = left + layout.vw / 2; py = top + layout.vh / 2; }
+  const gx = (px - left + view.x) / cs, gy = (py - top + view.y) / cs;
+  zoom = z < 1.03 ? 1 : z;
+  sizeBoard();
+  view.x = gx * layout.cs - (px - layout.left);
+  view.y = gy * layout.cs - (py - layout.top);
+  sizeBoard();
+  drawBoard();
+}
+function panBy(dx, dy) {
+  if (!layout) return;
+  view.x = Math.min(Math.max(view.x - dx, 0), layout.gw - layout.vw);
+  view.y = Math.min(Math.max(view.y - dy, 0), layout.gh - layout.vh);
+  drawBoard();
+}
+// scrolls so that cell i is in view (used by hints)
+function ensureVisible(i) {
+  if (!layout || zoom === 1) return;
+  const { cs, vw, vh } = layout, x = (i % cur.width) * cs, y = Math.floor(i / cur.width) * cs;
+  if (x < view.x || x + cs > view.x + vw) view.x = x + cs / 2 - vw / 2;
+  if (y < view.y || y + cs > view.y + vh) view.y = y + cs / 2 - vh / 2;
+  sizeBoard();
+}
+$("zoomIn").onclick = () => setZoom(zoom * 1.5);
+$("zoomOut").onclick = () => setZoom(zoom / 1.5);
 function lineDone(idx) {
   const W = cur.width, H = cur.height, arr = [];
   if (idx < H) for (let c = 0; c < W; c++) arr.push(cells[idx * W + c] === 1 ? 1 : 0);
@@ -1065,9 +1126,11 @@ function lineDone(idx) {
   const got = lineClue(arr);
   return got.length === want.length && got.every((v, i) => v === want[i]);
 }
+let mini = null;   // where the mini-map is drawn, for tapping on it
 function drawBoard() {
   if (!cur || !layout) return;
-  const { left, top, cs, slot, tw, th, dpr } = layout;
+  const { left, top, cs, slot, fs, pad, tw, th, dpr, vw, vh } = layout;
+  const ox = view.x, oy = view.y;
   const W = cur.width, H = cur.height;
   const ctx = board.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1075,78 +1138,140 @@ function drawBoard() {
   const C = { ink: css("--ink"), muted: css("--muted"), clue: css("--clue-bg"), cell: css("--cell"), crossed: css("--crossed"), line: css("--line"), focus: css("--focus"), blue: css("--blue") };
 
   ctx.fillStyle = C.clue;
-  ctx.fillRect(0, top, left, H * cs);
-  ctx.fillRect(left, 0, W * cs, top);
+  ctx.fillRect(0, top, left, vh);
+  ctx.fillRect(left, 0, vw, top);
   const fr = focusCell >= 0 ? Math.floor(focusCell / W) : -1, fc = focusCell >= 0 ? focusCell % W : -1;
-  if (fr >= 0 && !solved) {
-    ctx.fillStyle = C.focus;
-    ctx.fillRect(0, top + fr * cs, left + W * cs, cs);
-    ctx.fillRect(left + fc * cs, 0, cs, top + H * cs);
-  }
 
-  const fs = Math.max(9, Math.round(cs * 0.5));
+  // clue numbers, pinned to the edges and scrolled with the grid
   ctx.font = `600 ${fs}px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, top, left, vh); ctx.clip();
+  if (fr >= 0 && !solved) { ctx.fillStyle = C.focus; ctx.fillRect(0, top + fr * cs - oy, left, cs); }
   cur.rows.forEach((c, r) => {
-    const nums = c.length ? c : [0];
-    ctx.fillStyle = lineDone(r) ? C.muted : C.ink;
-    ctx.globalAlpha = lineDone(r) ? 0.45 : 1;
-    nums.forEach((n, t) => ctx.fillText(n, left - cs * 0.15 - (nums.length - t - 0.5) * slot, top + r * cs + cs / 2 + 1));
+    const y = top + r * cs - oy + cs / 2 + 1;
+    if (y < top - cs || y > top + vh + cs) return;
+    const nums = c.length ? c : [0], done = lineDone(r);
+    ctx.fillStyle = done ? C.muted : C.ink;
+    ctx.globalAlpha = done ? 0.45 : 1;
+    nums.forEach((n, k) => ctx.fillText(n, left - pad / 2 - (nums.length - k - 0.5) * slot, y));
   });
+  ctx.restore();
+  ctx.save();
+  ctx.beginPath(); ctx.rect(left, 0, vw, top); ctx.clip();
+  if (fc >= 0 && !solved) { ctx.fillStyle = C.focus; ctx.fillRect(left + fc * cs - ox, 0, cs, top); }
   cur.cols.forEach((c, col) => {
-    const nums = c.length ? c : [0];
-    ctx.fillStyle = lineDone(H + col) ? C.muted : C.ink;
-    ctx.globalAlpha = lineDone(H + col) ? 0.45 : 1;
-    nums.forEach((n, t) => ctx.fillText(n, left + col * cs + cs / 2, top - cs * 0.15 - (nums.length - t - 0.5) * slot + 1));
+    const x = left + col * cs - ox + cs / 2;
+    if (x < left - cs || x > left + vw + cs) return;
+    const nums = c.length ? c : [0], done = lineDone(H + col);
+    ctx.fillStyle = done ? C.muted : C.ink;
+    ctx.globalAlpha = done ? 0.45 : 1;
+    nums.forEach((n, k) => ctx.fillText(n, x, top - pad / 2 - (nums.length - k - 0.5) * slot + 1));
   });
+  ctx.restore();
   ctx.globalAlpha = 1;
 
-  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
-    const i = r * W + c, x = left + c * cs, y = top + r * cs, v = cells[i];
+  // the grid itself
+  ctx.save();
+  ctx.beginPath(); ctx.rect(left, top, vw + 1, vh + 1); ctx.clip();
+  ctx.translate(left - ox, top - oy);
+  const c0 = Math.max(0, Math.floor(ox / cs)), c1 = Math.min(W, Math.ceil((ox + vw) / cs));
+  const r0 = Math.max(0, Math.floor(oy / cs)), r1 = Math.min(H, Math.ceil((oy + vh) / cs));
+  for (let r = r0; r < r1; r++) for (let c = c0; c < c1; c++) {
+    const i = r * W + c, v = cells[i];
     ctx.fillStyle = v === 1 ? cellColor(cur, i) : v === 2 ? C.crossed : C.cell;
-    ctx.fillRect(x, y, cs, cs);
+    ctx.fillRect(c * cs, r * cs, cs, cs);
   }
   if (flash && flash.until > performance.now()) {
     ctx.strokeStyle = flash.color; ctx.lineWidth = 3;
-    flash.cells.forEach(i => ctx.strokeRect(left + (i % W) * cs + 1.5, top + Math.floor(i / W) * cs + 1.5, cs - 3, cs - 3));
+    flash.cells.forEach(i => ctx.strokeRect((i % W) * cs + 1.5, Math.floor(i / W) * cs + 1.5, cs - 3, cs - 3));
   }
-
   ctx.strokeStyle = C.line; ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let c = 0; c <= W; c++) { const x = left + c * cs + .5; ctx.moveTo(x, top); ctx.lineTo(x, top + H * cs); }
-  for (let r = 0; r <= H; r++) { const y = top + r * cs + .5; ctx.moveTo(left, y); ctx.lineTo(left + W * cs, y); }
+  for (let c = 0; c <= W; c++) { ctx.moveTo(c * cs + .5, 0); ctx.lineTo(c * cs + .5, H * cs); }
+  for (let r = 0; r <= H; r++) { ctx.moveTo(0, r * cs + .5); ctx.lineTo(W * cs, r * cs + .5); }
   ctx.stroke();
   ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5;
   ctx.beginPath();
-  for (let c = 0; c <= W; c += 5) { const x = left + c * cs + .5; ctx.moveTo(x, top); ctx.lineTo(x, top + H * cs); }
-  for (let r = 0; r <= H; r += 5) { const y = top + r * cs + .5; ctx.moveTo(left, y); ctx.lineTo(left + W * cs, y); }
-  ctx.moveTo(left + W * cs + .5, top); ctx.lineTo(left + W * cs + .5, top + H * cs);
-  ctx.moveTo(left, top + H * cs + .5); ctx.lineTo(left + W * cs, top + H * cs + .5);
+  for (let c = 0; c <= W; c += 5) { ctx.moveTo(c * cs + .5, 0); ctx.lineTo(c * cs + .5, H * cs); }
+  for (let r = 0; r <= H; r += 5) { ctx.moveTo(0, r * cs + .5); ctx.lineTo(W * cs, r * cs + .5); }
+  ctx.moveTo(W * cs + .5, 0); ctx.lineTo(W * cs + .5, H * cs);
+  ctx.moveTo(0, H * cs + .5); ctx.lineTo(W * cs, H * cs + .5);
   ctx.stroke();
-
   if (revealAlpha > 0 && revealImg && revealImg.complete && revealImg.naturalWidth) {
     ctx.globalAlpha = revealAlpha;
     ctx.fillStyle = "#fff";
-    ctx.fillRect(left, top, W * cs, H * cs);
-    ctx.drawImage(revealImg, left, top, W * cs, H * cs);
+    ctx.fillRect(0, 0, W * cs, H * cs);
+    ctx.drawImage(revealImg, 0, 0, W * cs, H * cs);
     ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+
+  // mini-map of the whole grid in the corner, with the part in view outlined
+  mini = null;
+  if (zoom > 1) {
+    const m = Math.min((left - 6) / W, (top - 6) / H);
+    if (m > 0.8) {
+      const mw = W * m, mh = H * m, mx = (left - mw) / 2, my = (top - mh) / 2;
+      ctx.fillStyle = C.cell; ctx.fillRect(mx, my, mw, mh);
+      for (let i = 0; i < W * H; i++) {
+        if (cells[i] === 0) continue;
+        ctx.fillStyle = cells[i] === 1 ? cellColor(cur, i) : C.crossed;
+        ctx.fillRect(mx + (i % W) * m, my + Math.floor(i / W) * m, Math.ceil(m), Math.ceil(m));
+      }
+      ctx.strokeStyle = C.blue; ctx.lineWidth = 2;
+      ctx.strokeRect(mx + (ox / cs) * m, my + (oy / cs) * m, (vw / cs) * m, (vh / cs) * m);
+      mini = { mx, my, m };
+    }
   }
 }
 
 // input
+function boardPoint(e) { const r = board.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 function cellAt(e) {
-  const r = board.getBoundingClientRect(), { left, top, cs } = layout;
-  const c = Math.floor((e.clientX - r.left - left) / cs), rr = Math.floor((e.clientY - r.top - top) / cs);
+  const { x, y } = boardPoint(e), { left, top, cs, vw, vh } = layout;
+  if (x < left || y < top || x >= left + vw || y >= top + vh) return null;
+  const c = Math.floor((x - left + view.x) / cs), rr = Math.floor((y - top + view.y) / cs);
   if (c < 0 || c >= cur.width || rr < 0 || rr >= cur.height) return null;
   return { r: rr, c };
 }
-let stroke = null;
+function regionAt(e) {
+  const { x, y } = boardPoint(e), { left, top } = layout;
+  if (x < left && y < top) return "corner";
+  if (y < top) return "top";
+  if (x < left) return "left";
+  return "grid";
+}
+// moves the view so that the mini-map point under the finger is in the middle
+function miniJump(e) {
+  if (!mini) return;
+  const { x, y } = boardPoint(e), { cs, vw, vh } = layout;
+  view.x = ((x - mini.mx) / mini.m) * cs - vw / 2;
+  view.y = ((y - mini.my) / mini.m) * cs - vh / 2;
+  sizeBoard(); drawBoard();
+}
+let stroke = null, pan = null, gesture = null, blockPaint = false;
+const pointers = new Map();
 board.addEventListener("pointerdown", e => {
-  if (!cur || solved) return;
+  if (!cur || !layout) return;
+  e.preventDefault();
+  try { board.setPointerCapture(e.pointerId); } catch (err) { /* not every pointer can be captured */ }
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    // a second finger: stop painting and pan or pinch instead
+    if (stroke) { cells.set(stroke.snap); undoStack.pop(); stroke = null; drawBoard(); }
+    pan = null; blockPaint = true;
+    const [a, b] = [...pointers.values()];
+    gesture = { mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, dist: Math.hypot(a.x - b.x, a.y - b.y) || 1 };
+    return;
+  }
+  if (pointers.size > 2 || blockPaint) return;
+  const region = regionAt(e);
+  if (region === "top" || region === "left") { pan = { axis: region === "top" ? "x" : "y", last: { x: e.clientX, y: e.clientY } }; return; }
+  if (region === "corner") { if (mini) { pan = { axis: "mini" }; miniJump(e); } return; }
+  if (solved) return;
   const p = cellAt(e);
   if (!p) return;
-  e.preventDefault();
-  board.setPointerCapture(e.pointerId);
   const i = p.r * cur.width + p.c;
   const target = mode;
   const action = cells[i] === target ? 0 : target;
@@ -1158,6 +1283,23 @@ board.addEventListener("pointerdown", e => {
   applyStroke(p);
 });
 board.addEventListener("pointermove", e => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (gesture && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()];
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const r = board.getBoundingClientRect();
+    if (Math.abs(dist / gesture.dist - 1) > 0.01) setZoom(zoom * dist / gesture.dist, mid.x - r.left, mid.y - r.top);
+    panBy(mid.x - gesture.mid.x, mid.y - gesture.mid.y);
+    gesture = { mid, dist };
+    return;
+  }
+  if (pan) {
+    if (pan.axis === "mini") { miniJump(e); return; }
+    panBy(pan.axis === "x" ? e.clientX - pan.last.x : 0, pan.axis === "y" ? e.clientY - pan.last.y : 0);
+    pan.last = { x: e.clientX, y: e.clientY };
+    return;
+  }
   if (!stroke) return;
   const p = cellAt(e);
   if (!p) return;
@@ -1187,8 +1329,21 @@ function endStroke() {
   persist();
   checkWin();
 }
-board.addEventListener("pointerup", endStroke);
-board.addEventListener("pointercancel", endStroke);
+function pointerEnd(e) {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) gesture = null;
+  if (pointers.size === 0) { pan = null; blockPaint = false; }
+  endStroke();
+}
+board.addEventListener("pointerup", pointerEnd);
+board.addEventListener("pointercancel", pointerEnd);
+// on a computer: the mouse wheel scrolls a zoomed grid, ctrl + wheel (or a trackpad pinch) zooms
+board.addEventListener("wheel", e => {
+  if (!cur || !layout) return;
+  const r = board.getBoundingClientRect();
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(zoom * Math.exp(-e.deltaY * 0.01), e.clientX - r.left, e.clientY - r.top); }
+  else if (zoom > 1) { e.preventDefault(); panBy(-e.deltaX, -e.deltaY); }
+}, { passive: false });
 
 function undo() {
   if (!cur || solved || !undoStack.length) return;
@@ -1210,6 +1365,7 @@ $("restartBtn").onclick = () => {
 
 // hints
 function showFlash(set, color) {
+  if (focusCell >= 0) ensureVisible(focusCell);
   flash = { cells: set, color, until: performance.now() + 1600 };
   drawBoard();
   setTimeout(drawBoard, 1650);
@@ -1290,6 +1446,7 @@ function checkWin() {
   if (solved) return;
   for (let idx = 0; idx < cur.width + cur.height; idx++) if (!lineDone(idx)) return;
   solved = true;
+  zoom = 1; view = { x: 0, y: 0 }; sizeBoard();
   pauseTimer();
   for (let k = 0; k < cells.length; k++) cells[k] = cells[k] === 1 ? 1 : 2;
   persist();

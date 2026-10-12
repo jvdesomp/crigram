@@ -401,6 +401,66 @@ function propagate(st, W, H, rows, cols) {
   }
   return true;
 }
+// ---------- estimated solving time ----------
+// Calibrated on real solve times (October 2026: barcode decoding ≈ 5 min, ferroptosis ≈ 10 min, CRIG walk ≈ 16 min).
+// Recalibrate both numbers when median solve times of more puzzles are known.
+const TIME_PER_SEARCH = 0.057;   // minutes per row or column a player looks at before finding one that gives progress
+const TIME_PER_BIT = 0.32;       // minutes per bit of reasoning in rows that still allow several fillings
+const DIFFICULTY_LEVELS = [[5, "easy", 1], [10, "medium", 2], [20, "hard", 3], [Infinity, "expert", 4]];
+function estimateDifficulty(W, H, rows, cols) {
+  const lineOf = (st, idx) => {
+    if (idx < H) return st.slice(idx * W, (idx + 1) * W);
+    const line = new Int8Array(H);
+    for (let r = 0; r < H; r++) line[r] = st[r * W + idx - H];
+    return line;
+  };
+  const cell = (idx, x) => (idx < H ? idx * W + x : x * W + idx - H);
+  const clue = idx => (idx < H ? rows[idx] : cols[idx - H]);
+  // 1. search: a player takes the row or column that gives the most new cells; when only few lines give
+  //    progress, finding one means looking at many: on average (rows + columns) / useful lines
+  let st = new Int8Array(W * H).fill(-1), search = 0, steps = 0;
+  const cellSearch = new Float32Array(W * H).fill(-1);
+  for (;;) {
+    let best = null, useful = 0;
+    for (let idx = 0; idx < W + H; idx++) {
+      const line = lineOf(st, idx), out = solveLine(line, clue(idx));
+      if (!out) return null;
+      let g = 0;
+      for (let x = 0; x < line.length; x++) if (out.res[x] !== line[x]) g++;
+      if (g) { useful++; if (!best || g > best.g) best = { idx, out, g }; }
+    }
+    if (!best) break;
+    const cost = (W + H) / useful;
+    search += cost; steps++;
+    const n = best.idx < H ? W : H;
+    for (let x = 0; x < n; x++) {
+      const i = cell(best.idx, x);
+      if (st[i] === -1 && best.out.res[x] !== -1) { st[i] = best.out.res[x]; cellSearch[i] = cost; }
+    }
+  }
+  const solved = !st.includes(-1);
+  // 2. reasoning: a player takes the line with the fewest possible fillings; a line with k fillings costs log2(k) bits
+  st = new Int8Array(W * H).fill(-1);
+  let bits = 0;
+  for (;;) {
+    let best = null;
+    for (let idx = 0; idx < W + H; idx++) {
+      const line = lineOf(st, idx), out = solveLine(line, clue(idx));
+      if (!out) return null;
+      let g = 0;
+      for (let x = 0; x < line.length; x++) if (out.res[x] !== line[x]) g++;
+      if (g && (!best || out.count < best.out.count || (out.count === best.out.count && g > best.g))) best = { idx, out, g };
+    }
+    if (!best) break;
+    bits += Math.log2(best.out.count);
+    const n = best.idx < H ? W : H;
+    for (let x = 0; x < n; x++) if (best.out.res[x] !== -1) st[cell(best.idx, x)] = best.out.res[x];
+  }
+  const minutes = TIME_PER_SEARCH * search + TIME_PER_BIT * bits;
+  const [, label, stars] = DIFFICULTY_LEVELS.find(l => minutes < l[0]);
+  return { minutes, label, stars, search, bits, steps, cellSearch, solved };
+}
+
 function solveAll(W, H, rows, cols, limit) {
   const sols = [];
   let nodes = 0;
@@ -554,7 +614,9 @@ function preparePuzzles(data) {
     const rows = [], cols = [];
     for (let r = 0; r < H; r++) rows.push(lineClue(sol.subarray(r * W, (r + 1) * W)));
     for (let c = 0; c < W; c++) { const col = []; for (let r = 0; r < H; r++) col.push(sol[r * W + c]); cols.push(lineClue(col)); }
-    const d = p.difficulty || null;
+    // the game estimates the difficulty itself from the clues, so a recalibration only needs a new crigram.html
+    const e = estimateDifficulty(W, H, rows, cols);
+    const d = e ? { minutes: e.minutes, label: e.label, stars: e.stars } : p.difficulty || null;
     if (d && OLD_LABEL[d.label]) d.label = OLD_LABEL[d.label];
     const q = { ...p, id: p.id || "puzzle-" + i, sol, rows, cols, difficulty: d, source: p.source || {} };
     // colours saved by the maker: a palette plus one digit per cell
@@ -709,7 +771,8 @@ function renderHome() {
       (prog && prog.solved
         ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
         : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "");
-    b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${stars(p)}${status}</small>`);
+    const mins = p.difficulty && p.difficulty.minutes != null ? ` · ≈ ${Math.max(1, Math.round(p.difficulty.minutes))} min` : "";
+    b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${stars(p)}${mins}${status}</small>`);
     b.onclick = () => openPuzzle(i);
     list.appendChild(b);
   });
@@ -797,10 +860,50 @@ document.addEventListener("visibilitychange", () => {
 });
 $("reminderLink").addEventListener("click", openReminder);
 
+// ---------- staying up to date ----------
+// An installed app is often resumed rather than reloaded, so when the game comes back to the foreground
+// it checks for a new crigram.json (new puzzles) and a new crigram.html (new game version).
+let dataSig = null, pageTag = null, pendingData = null, pendingReload = false, lastCheck = 0;
+const signature = text => fnv1a(text).toString(36) + ":" + text.length;
+async function pageVersion() {
+  const h = await fetch(location.pathname, { method: "HEAD", cache: "no-store" });
+  return h.ok ? h.headers.get("etag") || h.headers.get("last-modified") : null;
+}
+async function checkForUpdates() {
+  if (!/^https?:/.test(location.protocol) || Date.now() - lastCheck < 60e3) return;
+  lastCheck = Date.now();
+  try {
+    const tag = await pageVersion();
+    if (tag && pageTag && tag !== pageTag) {
+      if (!cur) { location.reload(); return; }
+      pendingReload = true;   // reload as soon as the player leaves the puzzle
+    }
+    if (tag && !pageTag) pageTag = tag;
+    const r = await fetch("crigram.json", { cache: "no-store" });
+    if (!r.ok) return;
+    const text = await r.text(), sig = signature(text);
+    if (sig === dataSig) return;
+    dataSig = sig;
+    if (cur) pendingData = JSON.parse(text);
+    else setPuzzles(JSON.parse(text), false);
+  } catch (e) { /* offline: keep what we have */ }
+}
+function applyPendingUpdates() {
+  if (pendingReload) { location.reload(); return true; }
+  if (pendingData) { setPuzzles(pendingData, false); pendingData = null; }
+  return false;
+}
+
 async function init() {
+  if (/^https?:/.test(location.protocol)) pageVersion().then(tag => { pageTag = tag; }).catch(() => {});
   try {
     const r = await fetch("crigram.json", { cache: "no-store" });
-    if (r.ok && setPuzzles(await r.json(), false)) { afterLoad(); return; }
+    if (r.ok) {
+      const text = await r.text();
+      dataSig = signature(text);
+      lastCheck = Date.now();
+      if (setPuzzles(JSON.parse(text), false)) { afterLoad(); return; }
+    }
   } catch (e) { /* opened as a local file: fall back to stored or picked puzzles */ }
   const stored = readJSON(PUZZLES_KEY, null);
   if (stored && stored.length) setPuzzles(stored, false);
@@ -909,6 +1012,7 @@ function leavePuzzle() {
   pauseTimer(); persist();
   clearInterval(timerId);
   cur = null;
+  if (applyPendingUpdates()) return;
   renderHome();
   showScreen("home");
 }
@@ -916,6 +1020,7 @@ $("backBtn").onclick = leavePuzzle;
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && cur) { pauseTimer(); persist(); }
   if (!document.hidden && allPuzzles.length) { applyRelease(); if (!cur) renderHome(); }
+  if (!document.hidden) checkForUpdates();
 });
 
 function setMode(m) {

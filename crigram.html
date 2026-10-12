@@ -298,7 +298,7 @@
       <li>A new puzzle appears every Monday at 06:00 (Brussels time). Solve it within the week to keep your streak going. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
     </ul>
     <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
-    <p class="sub" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>About:</b> CRIGram was created by Jo Vandesompele (CRIG, Ghent University), with code written with the help of Claude (Opus 5.5), an AI assistant by Anthropic.</p>
+    <p class="sub" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>About:</b> CRIGram was created by Jo Vandesompele (CRIG, Ghent University), with code written with the help of Claude (Opus 5.5), an AI assistant by Anthropic. Code: PolyForm Noncommercial 1.0.0. Puzzles: CC BY-NC-SA 4.0. Figures keep their own licence.</p>
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
   </div>
 </div>
@@ -1209,7 +1209,12 @@ function researchHtml(s) {
   if (s.article) parts.push(`<i>${escapeHtml(s.article)}</i>`);
   if (s.journal) parts.push(escapeHtml(s.journal));
   const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
-  const meta = [doi ? `doi:${escapeHtml(doi)}` : "", s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? `figure licence ${escapeHtml(s.license)}` : ""].filter(Boolean).join(" · ");
+  const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
+  const plUrl = { "CC BY-NC-SA 4.0": "by-nc-sa", "CC BY-NC 4.0": "by-nc", "CC BY-SA 4.0": "by-sa", "CC BY 4.0": "by" }[pl];
+  const meta = [doi ? `doi:${escapeHtml(doi)}` : "",
+    s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? `figure licence ${escapeHtml(s.license)}` : "",
+    plUrl ? `puzzle licence <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle licence ${escapeHtml(pl)}`,
+  ].filter(Boolean).join(" · ");
   const link = paperLink(s);
   if (!parts.length && !meta && !link) return "";
   return (parts.length ? `<div>${parts.join(". ")}.</div>` : "") + (meta ? `<div class="meta">${meta}</div>` : "") +

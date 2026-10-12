@@ -82,6 +82,10 @@
   .box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 16px; font-size: 14px; }
   .box-title { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; letter-spacing: .3px; }
   .box .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .text-link { color: var(--blue); }
+  a.btn.cta { display: block; margin-top: 14px; border: 1.5px solid var(--blue); color: var(--blue); font-weight: 600; }
+  .licence-note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+  .licence-note .link { font-size: 12px !important; }
   .paper-link { display: inline-block; margin-top: 8px; font-weight: 600; color: var(--blue); text-decoration: none; }
   .result-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .result-row .solved { font-weight: 600; color: var(--ok); }
@@ -1229,10 +1233,11 @@ function licenceLine(s, withImage) {
     plUrl ? `puzzle licence <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle licence ${escapeHtml(pl)}`,
   ].filter(Boolean).join(" · ");
 }
+// a free puzzle: its link as a clear button under the text (with the maker's own wording), the licence as a footnote
 function aboutHtml(s) {
   const link = s.url && /^https?:\/\//i.test(s.url) ? s.url : "";
-  return `<div class="meta">${licenceLine(s, !!cur.image)}</div>` +
-    (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">Read more ↗</a>` : "");
+  return (link ? `<a class="btn cta" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(s.linkText || "Read more")} ↗</a>` : "") +
+    `<p class="licence-note">${licenceLine(s, !!cur.image)}</p>`;
 }
 function paperLink(s) {
   const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
@@ -1240,9 +1245,11 @@ function paperLink(s) {
   if (s.url && /^https?:\/\//i.test(s.url)) return s.url;
   return "";
 }
+// paragraphs on empty lines; [link text](https://...) becomes a link
 function paragraphs(text) {
+  const links = s => s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="text-link" href="$2" target="_blank" rel="noopener">$1</a>');
   return String(text || "").trim().split(/\n\s*\n/).filter(Boolean)
-    .map(p => `<p>${escapeHtml(p.trim()).replace(/\n/g, "<br>")}</p>`).join("");
+    .map(p => `<p>${links(escapeHtml(p.trim())).replace(/\n/g, "<br>")}</p>`).join("");
 }
 // the solved puzzle as a picture: logo colours on white, with a faint grid
 function crigramImage(p) {
@@ -1283,7 +1290,7 @@ function showWin(revisit) {
     ${layTitle ? `<div class="kicker">Puzzle: ${escapeHtml(cur.title)}</div>` : ""}
     <h2 style="margin-top:${layTitle ? 2 : 14}px">${escapeHtml(layTitle || cur.title)}</h2>
     <div class="summary">${paragraphs(cur.laySummary || cur.description)}</div>
-    ${research ? `<section class="box"><div class="box-title">${isFree ? "About this puzzle" : "The research"}</div>${research}</section>` : ""}
+    ${isFree ? research : research ? `<section class="box"><div class="box-title">The research</div>${research}</section>` : ""}
     <section class="box">
       <div class="box-title">Your result</div>
       <div class="result-row">

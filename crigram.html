@@ -71,6 +71,7 @@
   .pcard small { color: var(--muted); font-size: 12px; }
   .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); margin-left: 4px; }
   .tag.done { background: rgba(31,138,76,.14); color: var(--ok); }
+  .tag.special { background: #a54499; color: #fff; }
   .tag.new { background: #fcb033; color: #3a2600; }
   .tag.soon { background: var(--clue-bg); color: var(--muted); }
   .nextup { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 14px; }
@@ -84,8 +85,8 @@
   .box .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
   .text-link { color: var(--blue); }
   a.btn.cta { display: block; margin-top: 14px; border: 1.5px solid var(--blue); color: var(--blue); font-weight: 600; }
-  .licence-note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
-  .licence-note .link { font-size: 12px !important; }
+  .license-note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+  .license-note .link { font-size: 12px !important; }
   .paper-link { display: inline-block; margin-top: 8px; font-weight: 600; color: var(--blue); text-decoration: none; }
   .result-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .result-row .solved { font-weight: 600; color: var(--ok); }
@@ -120,6 +121,8 @@
   .bar .title small { color: var(--muted); font-size: 12px; }
   .icon { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); display: grid; place-items: center; padding: 0; font-size: 18px; }
   .icon svg { width: 20px; height: 20px; }
+  .icon.zoom { width: 44px; height: 44px; border-radius: 12px; }
+  .icon:disabled { opacity: .35; }
   .icon[hidden] { display: none; }
   .paper-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; text-decoration: none; }
   #boardWrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 10px 8px; overflow: auto; }
@@ -143,6 +146,15 @@
   .sheet .actions { display: flex; gap: 10px; margin-top: 16px; }
   .sheet .actions .btn { flex: 1; }
   .rules li { margin-bottom: 6px; }
+  .example { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; }
+  .ex-clue { background: var(--clue-bg); border-radius: 4px; padding: 3px 8px; font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .ex-row { display: inline-flex; border: 1.5px solid var(--muted); }
+  .ex-row i { width: 22px; height: 22px; background: var(--crossed); border-right: 1px solid var(--line); }
+  .ex-row i:last-child { border-right: 0; }
+  .ex-row i.thick { border-right: 3px solid var(--ink); }
+  .ex-row i.f { background: #0079c1; border-right-color: rgba(255,255,255,.55); }
+  .ex-row i.f.thick { border-right-color: var(--ink); }
+  .ex-note { display: block; font-size: 14px; color: var(--muted); }
 
   /* stats page */
   .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -224,10 +236,16 @@
   </div>
   <div id="boardWrap"><canvas id="board"></canvas></div>
   <div class="tools">
+    <button class="icon zoom" id="zoomOut" aria-label="Zoom out">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
+    </button>
     <div class="mode" role="group" aria-label="Tool">
       <button id="modeFill" class="on"><span class="swatch"></span>Fill</button>
       <button id="modeCross"><span class="xmark"></span>Blank</button>
     </div>
+    <button class="icon zoom" id="zoomIn" aria-label="Zoom in">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg>
+    </button>
   </div>
 </section>
 
@@ -293,16 +311,23 @@
     <h2>How to play</h2>
     <div class="sub">Each puzzle hides part of a figure from a CRIG paper.</div>
     <ul class="rules">
-      <li>The numbers next to each row and above each column tell you the lengths of the filled blocks in that line, in order.</li>
-      <li>Between two blocks there is at least one empty cell. A <b>0</b> means the line is empty.</li>
-      <li>Use <b>Fill</b> to colour cells and <b>Blank</b> to turn cells white when you know they stay empty. Grey cells are still undecided.</li>
+      <li>Each number is a <b>run</b>: a group of filled cells right next to each other. The numbers next to a row give its runs from left to right; the numbers above a column give its runs from top to bottom.
+        <div class="example" aria-label="Example: a row with clue 1 4 1">
+          <span class="ex-clue">1&nbsp;4&nbsp;1</span>
+          <span class="ex-row"><i class="f"></i><i></i><i class="f"></i><i class="f"></i><i class="f thick"></i><i class="f"></i><i></i><i></i><i class="f"></i><i></i></span>
+        </div>
+        <span class="ex-note">For example, <b>1 4 1</b> means: a run of 1, then a run of 4, then a run of 1. Here the run of 4 even crosses a thick line.</span></li>
+      <li>Between two runs there is at least one empty cell; how many, and where the runs start, is up to you to work out. A <b>0</b> means the whole line is empty.</li>
+      <li>The thick lines every 5 cells only help you count. They have nothing to do with the numbers.</li>
+      <li>Use <b>Fill</b> to color cells and <b>Blank</b> to turn cells white when you know they stay empty. Gray cells are still undecided.</li>
       <li>Drag along a row or column to mark several cells at once. Tap a marked cell again to clear it.</li>
       <li>Every puzzle can be solved by logic alone. No guessing needed!</li>
+      <li>Cells too small? Use <b>+</b> and <b>−</b> to zoom. Drag along the clue numbers (or with two fingers) to move around; the mini-map in the corner shows where you are.</li>
       <li>Stuck? The bulb gives you a hint.</li>
-      <li>A new puzzle appears every Monday at 06:00 (Brussels time). Solve it within the week to keep your streak going. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
+      <li>A new puzzle appears every Monday at 06:00 (Brussels time), or occasionally on special dates. Solve the Monday puzzle within the week to keep your streak going; special puzzles are a bonus and never break your streak. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
     </ul>
     <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
-    <p class="sub" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>About:</b> CRIGram was created by Jo Vandesompele (CRIG, Ghent University), with code written with the help of Claude (Opus 5.5), an AI assistant by Anthropic. Code: PolyForm Noncommercial 1.0.0. Puzzles: CC BY-NC-SA 4.0. Figures keep their own licence.</p>
+    <p class="sub" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>About:</b> CRIGram was created by Jo Vandesompele (CRIG, Ghent University), with code written with the help of Claude (Opus 5.5), an AI assistant by Anthropic. Code: PolyForm Noncommercial 1.0.0. Puzzles: CC BY-NC-SA 4.0. Figures keep their own license.</p>
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
   </div>
 </div>
@@ -619,7 +644,7 @@ function preparePuzzles(data) {
     const d = e ? { minutes: e.minutes, label: e.label, stars: e.stars } : p.difficulty || null;
     if (d && OLD_LABEL[d.label]) d.label = OLD_LABEL[d.label];
     const q = { ...p, id: p.id || "puzzle-" + i, sol, rows, cols, difficulty: d, source: p.source || {} };
-    // colours saved by the maker: a palette plus one digit per cell
+    // colors saved by the maker: a palette plus one digit per cell
     if (Array.isArray(p.palette) && p.palette.length && Array.isArray(p.colors) && p.colors.length === H &&
         p.colors.every(s => typeof s === "string" && s.length === W && /^\d+$/.test(s))) {
       q.cellColors = [];
@@ -701,10 +726,10 @@ function stars(p) {
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
-// ---------- CRIG logo colours ----------
+// ---------- CRIG logo colors ----------
 const CRIG_COLORS = ["#0079c1", "#13b5ea", "#73c167", "#fcb033", "#ef4035", "#f490af", "#a54499"];
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-// a fixed "random" colour per cell, so colours do not change while playing
+// a fixed "random" color per cell, so colors do not change while playing
 function cellColor(p, i) {
   if (p.cellColors) return p.cellColors[i];
   let h = (hashStr(p.id) ^ Math.imul(i + 1, 2654435761)) >>> 0;
@@ -767,6 +792,7 @@ function renderHome() {
     const name = prog && prog.solved ? p.title : "Puzzle " + (i + 1);
     const rt = releaseTime(p);
     const status = (rt !== null && rt > now ? `<span class="tag soon">scheduled ${new Date(rt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>` : "") +
+      (isSpecial(p) ? '<span class="tag special">special</span>' : "") +
       (rt !== null && rt <= now && now - rt < 6048e5 ? '<span class="tag new">new this week</span>' : "") +
       (prog && prog.solved
         ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
@@ -831,7 +857,7 @@ function pickNotice(prevVisit) {
   if (fresh.length === 1) return `New since your last visit: <b>Puzzle ${puzzles.indexOf(fresh[0]) + 1}</b>.`;
   if (fresh.length > 1) return `<b>${fresh.length} new puzzles</b> since your last visit.`;
   // late in the week, warn about a streak that is about to end
-  const weekly = puzzles.filter(p => { const t = releaseTime(p); return t !== null && t <= now; });
+  const weekly = puzzles.filter(p => { const t = releaseTime(p); return t !== null && t <= now && !isSpecial(p); });
   const last = weekly[weekly.length - 1];
   const wd = weekday(brusselsDate(now));
   if (last && !isSolved(last) && now < releaseTime(last) + 7 * DAY && (wd === 5 || wd === 6 || wd === 0)) {
@@ -976,6 +1002,7 @@ function openPuzzle(i) {
   updateMeta();
   setMode(1);
   showScreen("play");
+  zoom = 1; view = { x: 0, y: 0 };
   sizeBoard(); drawBoard();
   if (solved) showWin(true);
   else window.scrollTo(0, 0);
@@ -1035,10 +1062,16 @@ document.addEventListener("keydown", e => {
   if (e.key === "f" || e.key === "1") setMode(1);
   if (e.key === "x" || e.key === "2") setMode(2);
   if ((e.metaKey || e.ctrlKey) && e.key === "z") { e.preventDefault(); undo(); }
+  if (!e.metaKey && !e.ctrlKey && (e.key === "+" || e.key === "=")) setZoom(zoom * 1.5);
+  if (!e.metaKey && !e.ctrlKey && e.key === "-") setZoom(zoom / 1.5);
 });
 
 // layout and drawing
+// zoom: 1 = the whole grid fits; with + and - (or pinching) cells get bigger and the grid scrolls,
+// while the clue numbers stay pinned to the edges and a mini-map in the corner shows the whole grid
 const board = $("board");
+let zoom = 1;
+let view = { x: 0, y: 0 };   // scroll position inside the grid, in px
 function sizeBoard() {
   if (!cur) return;
   const W = cur.width, H = cur.height;
@@ -1047,16 +1080,61 @@ function sizeBoard() {
   const wrap = $("boardWrap");
   const availW = wrap.clientWidth - 16, availH = wrap.clientHeight - 20;
   const f = 0.72;
-  let cs = Math.floor(Math.min(availW / (W + maxR * f + 0.3), availH / (H + maxC * f + 0.3), 44));
-  cs = Math.max(cs, 13);
-  const slot = cs * f;
-  const left = Math.ceil(maxR * slot + cs * 0.3), top = Math.ceil(maxC * slot + cs * 0.3);
-  const tw = left + W * cs + 2, th = top + H * cs + 2;
+  const margins = c => { const s = Math.min(c * f, 22), p = Math.min(c * 0.3, 8); return [Math.ceil(maxR * s + p), Math.ceil(maxC * s + p)]; };
+  let fit = Math.floor(Math.min(availW / (W + maxR * f + 0.3), availH / (H + maxC * f + 0.3), 44));
+  // make sure the whole grid really fits at zoom 1, after rounding the clue margins
+  while (fit > 13) {
+    const [l, tp] = margins(fit);
+    if (l + W * fit + 2 <= availW && tp + H * fit + 2 <= availH) break;
+    fit--;
+  }
+  fit = Math.max(fit, 13);
+  const zMax = Math.max(1, Math.min(3.5, 48 / fit));
+  zoom = Math.min(Math.max(zoom, 1), zMax);
+  const cs = Math.round(fit * zoom);
+  const slot = Math.min(cs * f, 22), fs = Math.max(9, Math.round(slot * 0.69)), pad = Math.min(cs * 0.3, 8);
+  const left = Math.ceil(maxR * slot + pad), top = Math.ceil(maxC * slot + pad);
+  const gw = W * cs, gh = H * cs;
+  const vw = Math.max(cs, Math.min(gw, availW - left - 2)), vh = Math.max(cs, Math.min(gh, availH - top - 2));
+  view.x = Math.min(Math.max(view.x, 0), gw - vw);
+  view.y = Math.min(Math.max(view.y, 0), gh - vh);
+  const tw = left + vw + 2, th = top + vh + 2;
   const dpr = window.devicePixelRatio || 1;
   board.style.width = tw + "px"; board.style.height = th + "px";
   board.width = Math.round(tw * dpr); board.height = Math.round(th * dpr);
-  layout = { left, top, cs, slot, tw, th, dpr };
+  layout = { left, top, cs, slot, fs, pad, tw, th, dpr, vw, vh, gw, gh, zMax };
+  $("zoomIn").disabled = zoom >= zMax - 0.01;
+  $("zoomOut").disabled = zoom <= 1.001;
 }
+// zooms while keeping the grid point under (px, py) on the board in place
+function setZoom(z, px, py) {
+  if (!layout) return;
+  const { left, top, cs } = layout;
+  if (px === undefined) { px = left + layout.vw / 2; py = top + layout.vh / 2; }
+  const gx = (px - left + view.x) / cs, gy = (py - top + view.y) / cs;
+  zoom = z < 1.03 ? 1 : z;
+  sizeBoard();
+  view.x = gx * layout.cs - (px - layout.left);
+  view.y = gy * layout.cs - (py - layout.top);
+  sizeBoard();
+  drawBoard();
+}
+function panBy(dx, dy) {
+  if (!layout) return;
+  view.x = Math.min(Math.max(view.x - dx, 0), layout.gw - layout.vw);
+  view.y = Math.min(Math.max(view.y - dy, 0), layout.gh - layout.vh);
+  drawBoard();
+}
+// scrolls so that cell i is in view (used by hints)
+function ensureVisible(i) {
+  if (!layout || zoom === 1) return;
+  const { cs, vw, vh } = layout, x = (i % cur.width) * cs, y = Math.floor(i / cur.width) * cs;
+  if (x < view.x || x + cs > view.x + vw) view.x = x + cs / 2 - vw / 2;
+  if (y < view.y || y + cs > view.y + vh) view.y = y + cs / 2 - vh / 2;
+  sizeBoard();
+}
+$("zoomIn").onclick = () => setZoom(zoom * 1.5);
+$("zoomOut").onclick = () => setZoom(zoom / 1.5);
 function lineDone(idx) {
   const W = cur.width, H = cur.height, arr = [];
   if (idx < H) for (let c = 0; c < W; c++) arr.push(cells[idx * W + c] === 1 ? 1 : 0);
@@ -1065,9 +1143,11 @@ function lineDone(idx) {
   const got = lineClue(arr);
   return got.length === want.length && got.every((v, i) => v === want[i]);
 }
+let mini = null;   // where the mini-map is drawn, for tapping on it
 function drawBoard() {
   if (!cur || !layout) return;
-  const { left, top, cs, slot, tw, th, dpr } = layout;
+  const { left, top, cs, slot, fs, pad, tw, th, dpr, vw, vh } = layout;
+  const ox = view.x, oy = view.y;
   const W = cur.width, H = cur.height;
   const ctx = board.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1075,78 +1155,140 @@ function drawBoard() {
   const C = { ink: css("--ink"), muted: css("--muted"), clue: css("--clue-bg"), cell: css("--cell"), crossed: css("--crossed"), line: css("--line"), focus: css("--focus"), blue: css("--blue") };
 
   ctx.fillStyle = C.clue;
-  ctx.fillRect(0, top, left, H * cs);
-  ctx.fillRect(left, 0, W * cs, top);
+  ctx.fillRect(0, top, left, vh);
+  ctx.fillRect(left, 0, vw, top);
   const fr = focusCell >= 0 ? Math.floor(focusCell / W) : -1, fc = focusCell >= 0 ? focusCell % W : -1;
-  if (fr >= 0 && !solved) {
-    ctx.fillStyle = C.focus;
-    ctx.fillRect(0, top + fr * cs, left + W * cs, cs);
-    ctx.fillRect(left + fc * cs, 0, cs, top + H * cs);
-  }
 
-  const fs = Math.max(9, Math.round(cs * 0.5));
+  // clue numbers, pinned to the edges and scrolled with the grid
   ctx.font = `600 ${fs}px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, top, left, vh); ctx.clip();
+  if (fr >= 0 && !solved) { ctx.fillStyle = C.focus; ctx.fillRect(0, top + fr * cs - oy, left, cs); }
   cur.rows.forEach((c, r) => {
-    const nums = c.length ? c : [0];
-    ctx.fillStyle = lineDone(r) ? C.muted : C.ink;
-    ctx.globalAlpha = lineDone(r) ? 0.45 : 1;
-    nums.forEach((n, t) => ctx.fillText(n, left - cs * 0.15 - (nums.length - t - 0.5) * slot, top + r * cs + cs / 2 + 1));
+    const y = top + r * cs - oy + cs / 2 + 1;
+    if (y < top - cs || y > top + vh + cs) return;
+    const nums = c.length ? c : [0], done = lineDone(r);
+    ctx.fillStyle = done ? C.muted : C.ink;
+    ctx.globalAlpha = done ? 0.45 : 1;
+    nums.forEach((n, k) => ctx.fillText(n, left - pad / 2 - (nums.length - k - 0.5) * slot, y));
   });
+  ctx.restore();
+  ctx.save();
+  ctx.beginPath(); ctx.rect(left, 0, vw, top); ctx.clip();
+  if (fc >= 0 && !solved) { ctx.fillStyle = C.focus; ctx.fillRect(left + fc * cs - ox, 0, cs, top); }
   cur.cols.forEach((c, col) => {
-    const nums = c.length ? c : [0];
-    ctx.fillStyle = lineDone(H + col) ? C.muted : C.ink;
-    ctx.globalAlpha = lineDone(H + col) ? 0.45 : 1;
-    nums.forEach((n, t) => ctx.fillText(n, left + col * cs + cs / 2, top - cs * 0.15 - (nums.length - t - 0.5) * slot + 1));
+    const x = left + col * cs - ox + cs / 2;
+    if (x < left - cs || x > left + vw + cs) return;
+    const nums = c.length ? c : [0], done = lineDone(H + col);
+    ctx.fillStyle = done ? C.muted : C.ink;
+    ctx.globalAlpha = done ? 0.45 : 1;
+    nums.forEach((n, k) => ctx.fillText(n, x, top - pad / 2 - (nums.length - k - 0.5) * slot + 1));
   });
+  ctx.restore();
   ctx.globalAlpha = 1;
 
-  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
-    const i = r * W + c, x = left + c * cs, y = top + r * cs, v = cells[i];
+  // the grid itself
+  ctx.save();
+  ctx.beginPath(); ctx.rect(left, top, vw + 1, vh + 1); ctx.clip();
+  ctx.translate(left - ox, top - oy);
+  const c0 = Math.max(0, Math.floor(ox / cs)), c1 = Math.min(W, Math.ceil((ox + vw) / cs));
+  const r0 = Math.max(0, Math.floor(oy / cs)), r1 = Math.min(H, Math.ceil((oy + vh) / cs));
+  for (let r = r0; r < r1; r++) for (let c = c0; c < c1; c++) {
+    const i = r * W + c, v = cells[i];
     ctx.fillStyle = v === 1 ? cellColor(cur, i) : v === 2 ? C.crossed : C.cell;
-    ctx.fillRect(x, y, cs, cs);
+    ctx.fillRect(c * cs, r * cs, cs, cs);
   }
   if (flash && flash.until > performance.now()) {
     ctx.strokeStyle = flash.color; ctx.lineWidth = 3;
-    flash.cells.forEach(i => ctx.strokeRect(left + (i % W) * cs + 1.5, top + Math.floor(i / W) * cs + 1.5, cs - 3, cs - 3));
+    flash.cells.forEach(i => ctx.strokeRect((i % W) * cs + 1.5, Math.floor(i / W) * cs + 1.5, cs - 3, cs - 3));
   }
-
   ctx.strokeStyle = C.line; ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let c = 0; c <= W; c++) { const x = left + c * cs + .5; ctx.moveTo(x, top); ctx.lineTo(x, top + H * cs); }
-  for (let r = 0; r <= H; r++) { const y = top + r * cs + .5; ctx.moveTo(left, y); ctx.lineTo(left + W * cs, y); }
+  for (let c = 0; c <= W; c++) { ctx.moveTo(c * cs + .5, 0); ctx.lineTo(c * cs + .5, H * cs); }
+  for (let r = 0; r <= H; r++) { ctx.moveTo(0, r * cs + .5); ctx.lineTo(W * cs, r * cs + .5); }
   ctx.stroke();
   ctx.strokeStyle = C.muted; ctx.lineWidth = 1.5;
   ctx.beginPath();
-  for (let c = 0; c <= W; c += 5) { const x = left + c * cs + .5; ctx.moveTo(x, top); ctx.lineTo(x, top + H * cs); }
-  for (let r = 0; r <= H; r += 5) { const y = top + r * cs + .5; ctx.moveTo(left, y); ctx.lineTo(left + W * cs, y); }
-  ctx.moveTo(left + W * cs + .5, top); ctx.lineTo(left + W * cs + .5, top + H * cs);
-  ctx.moveTo(left, top + H * cs + .5); ctx.lineTo(left + W * cs, top + H * cs + .5);
+  for (let c = 0; c <= W; c += 5) { ctx.moveTo(c * cs + .5, 0); ctx.lineTo(c * cs + .5, H * cs); }
+  for (let r = 0; r <= H; r += 5) { ctx.moveTo(0, r * cs + .5); ctx.lineTo(W * cs, r * cs + .5); }
+  ctx.moveTo(W * cs + .5, 0); ctx.lineTo(W * cs + .5, H * cs);
+  ctx.moveTo(0, H * cs + .5); ctx.lineTo(W * cs, H * cs + .5);
   ctx.stroke();
-
   if (revealAlpha > 0 && revealImg && revealImg.complete && revealImg.naturalWidth) {
     ctx.globalAlpha = revealAlpha;
     ctx.fillStyle = "#fff";
-    ctx.fillRect(left, top, W * cs, H * cs);
-    ctx.drawImage(revealImg, left, top, W * cs, H * cs);
+    ctx.fillRect(0, 0, W * cs, H * cs);
+    ctx.drawImage(revealImg, 0, 0, W * cs, H * cs);
     ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+
+  // mini-map of the whole grid in the corner, with the part in view outlined
+  mini = null;
+  if (zoom > 1) {
+    const m = Math.min((left - 6) / W, (top - 6) / H);
+    if (m > 0.8) {
+      const mw = W * m, mh = H * m, mx = (left - mw) / 2, my = (top - mh) / 2;
+      ctx.fillStyle = C.cell; ctx.fillRect(mx, my, mw, mh);
+      for (let i = 0; i < W * H; i++) {
+        if (cells[i] === 0) continue;
+        ctx.fillStyle = cells[i] === 1 ? cellColor(cur, i) : C.crossed;
+        ctx.fillRect(mx + (i % W) * m, my + Math.floor(i / W) * m, Math.ceil(m), Math.ceil(m));
+      }
+      ctx.strokeStyle = C.blue; ctx.lineWidth = 2;
+      ctx.strokeRect(mx + (ox / cs) * m, my + (oy / cs) * m, (vw / cs) * m, (vh / cs) * m);
+      mini = { mx, my, m };
+    }
   }
 }
 
 // input
+function boardPoint(e) { const r = board.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 function cellAt(e) {
-  const r = board.getBoundingClientRect(), { left, top, cs } = layout;
-  const c = Math.floor((e.clientX - r.left - left) / cs), rr = Math.floor((e.clientY - r.top - top) / cs);
+  const { x, y } = boardPoint(e), { left, top, cs, vw, vh } = layout;
+  if (x < left || y < top || x >= left + vw || y >= top + vh) return null;
+  const c = Math.floor((x - left + view.x) / cs), rr = Math.floor((y - top + view.y) / cs);
   if (c < 0 || c >= cur.width || rr < 0 || rr >= cur.height) return null;
   return { r: rr, c };
 }
-let stroke = null;
+function regionAt(e) {
+  const { x, y } = boardPoint(e), { left, top } = layout;
+  if (x < left && y < top) return "corner";
+  if (y < top) return "top";
+  if (x < left) return "left";
+  return "grid";
+}
+// moves the view so that the mini-map point under the finger is in the middle
+function miniJump(e) {
+  if (!mini) return;
+  const { x, y } = boardPoint(e), { cs, vw, vh } = layout;
+  view.x = ((x - mini.mx) / mini.m) * cs - vw / 2;
+  view.y = ((y - mini.my) / mini.m) * cs - vh / 2;
+  sizeBoard(); drawBoard();
+}
+let stroke = null, pan = null, gesture = null, blockPaint = false;
+const pointers = new Map();
 board.addEventListener("pointerdown", e => {
-  if (!cur || solved) return;
+  if (!cur || !layout) return;
+  e.preventDefault();
+  try { board.setPointerCapture(e.pointerId); } catch (err) { /* not every pointer can be captured */ }
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    // a second finger: stop painting and pan or pinch instead
+    if (stroke) { cells.set(stroke.snap); undoStack.pop(); stroke = null; drawBoard(); }
+    pan = null; blockPaint = true;
+    const [a, b] = [...pointers.values()];
+    gesture = { mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, dist: Math.hypot(a.x - b.x, a.y - b.y) || 1 };
+    return;
+  }
+  if (pointers.size > 2 || blockPaint) return;
+  const region = regionAt(e);
+  if (region === "top" || region === "left") { pan = { axis: region === "top" ? "x" : "y", last: { x: e.clientX, y: e.clientY } }; return; }
+  if (region === "corner") { if (mini) { pan = { axis: "mini" }; miniJump(e); } return; }
+  if (solved) return;
   const p = cellAt(e);
   if (!p) return;
-  e.preventDefault();
-  board.setPointerCapture(e.pointerId);
   const i = p.r * cur.width + p.c;
   const target = mode;
   const action = cells[i] === target ? 0 : target;
@@ -1158,6 +1300,23 @@ board.addEventListener("pointerdown", e => {
   applyStroke(p);
 });
 board.addEventListener("pointermove", e => {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (gesture && pointers.size >= 2) {
+    const [a, b] = [...pointers.values()];
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const r = board.getBoundingClientRect();
+    if (Math.abs(dist / gesture.dist - 1) > 0.01) setZoom(zoom * dist / gesture.dist, mid.x - r.left, mid.y - r.top);
+    panBy(mid.x - gesture.mid.x, mid.y - gesture.mid.y);
+    gesture = { mid, dist };
+    return;
+  }
+  if (pan) {
+    if (pan.axis === "mini") { miniJump(e); return; }
+    panBy(pan.axis === "x" ? e.clientX - pan.last.x : 0, pan.axis === "y" ? e.clientY - pan.last.y : 0);
+    pan.last = { x: e.clientX, y: e.clientY };
+    return;
+  }
   if (!stroke) return;
   const p = cellAt(e);
   if (!p) return;
@@ -1187,8 +1346,21 @@ function endStroke() {
   persist();
   checkWin();
 }
-board.addEventListener("pointerup", endStroke);
-board.addEventListener("pointercancel", endStroke);
+function pointerEnd(e) {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) gesture = null;
+  if (pointers.size === 0) { pan = null; blockPaint = false; }
+  endStroke();
+}
+board.addEventListener("pointerup", pointerEnd);
+board.addEventListener("pointercancel", pointerEnd);
+// on a computer: the mouse wheel scrolls a zoomed grid, ctrl + wheel (or a trackpad pinch) zooms
+board.addEventListener("wheel", e => {
+  if (!cur || !layout) return;
+  const r = board.getBoundingClientRect();
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(zoom * Math.exp(-e.deltaY * 0.01), e.clientX - r.left, e.clientY - r.top); }
+  else if (zoom > 1) { e.preventDefault(); panBy(-e.deltaX, -e.deltaY); }
+}, { passive: false });
 
 function undo() {
   if (!cur || solved || !undoStack.length) return;
@@ -1210,6 +1382,7 @@ $("restartBtn").onclick = () => {
 
 // hints
 function showFlash(set, color) {
+  if (focusCell >= 0) ensureVisible(focusCell);
   flash = { cells: set, color, until: performance.now() + 1600 };
   drawBoard();
   setTimeout(drawBoard, 1650);
@@ -1290,6 +1463,7 @@ function checkWin() {
   if (solved) return;
   for (let idx = 0; idx < cur.width + cur.height; idx++) if (!lineDone(idx)) return;
   solved = true;
+  zoom = 1; view = { x: 0, y: 0 }; sizeBoard();
   pauseTimer();
   for (let k = 0; k < cells.length; k++) cells[k] = cells[k] === 1 ? 1 : 2;
   persist();
@@ -1310,7 +1484,7 @@ function checkWin() {
   requestAnimationFrame(anim);
   setTimeout(() => { if (cur === p) { revealAlpha = cur.image ? 1 : 0; drawBoard(); showWin(); } }, 2100);
 }
-// the source of the figure as one card: citation, DOI and licence, and a link to the paper
+// the source of the figure as one card: citation, DOI and license, and a link to the paper
 function researchHtml(s) {
   const parts = [];
   if (s.authors) parts.push(escapeHtml(s.authors) + (s.year ? ` (${escapeHtml(s.year)})` : ""));
@@ -1321,28 +1495,28 @@ function researchHtml(s) {
   const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
   const plUrl = { "CC BY-NC-SA 4.0": "by-nc-sa", "CC BY-NC 4.0": "by-nc", "CC BY-SA 4.0": "by-sa", "CC BY 4.0": "by" }[pl];
   const meta = [doi ? `doi:${escapeHtml(doi)}` : "",
-    s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? `figure licence ${escapeHtml(s.license)}` : "",
-    plUrl ? `puzzle licence <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle licence ${escapeHtml(pl)}`,
+    s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? `figure license ${escapeHtml(s.license)}` : "",
+    plUrl ? `puzzle license <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle license ${escapeHtml(pl)}`,
   ].filter(Boolean).join(" · ");
   const link = paperLink(s);
   if (!parts.length && !meta && !link) return "";
   return (parts.length ? `<div>${parts.join(". ")}.</div>` : "") + (meta ? `<div class="meta">${meta}</div>` : "") +
     (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">Read the paper ↗</a>` : "");
 }
-function licenceLine(s, withImage) {
+function licenseLine(s, withImage) {
   const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
   const plUrl = { "CC BY-NC-SA 4.0": "by-nc-sa", "CC BY-NC 4.0": "by-nc", "CC BY-SA 4.0": "by-sa", "CC BY 4.0": "by" }[pl];
   const own = /^(own work|to be checked|onbekend)$/i.test(s.license || "");
   return [
-    withImage && s.license && !own ? `image licence ${escapeHtml(s.license)}` : "",
-    plUrl ? `puzzle licence <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle licence ${escapeHtml(pl)}`,
+    withImage && s.license && !own ? `image license ${escapeHtml(s.license)}` : "",
+    plUrl ? `puzzle license <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle license ${escapeHtml(pl)}`,
   ].filter(Boolean).join(" · ");
 }
-// a free puzzle: its link as a clear button under the text (with the maker's own wording), the licence as a footnote
+// a free puzzle: its link as a clear button under the text (with the maker's own wording), the license as a footnote
 function aboutHtml(s) {
   const link = s.url && /^https?:\/\//i.test(s.url) ? s.url : "";
   return (link ? `<a class="btn cta" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(s.linkText || "Read more")} ↗</a>` : "") +
-    `<p class="licence-note">${licenceLine(s, !!cur.image)}</p>`;
+    `<p class="license-note">${licenseLine(s, !!cur.image)}</p>`;
 }
 function paperLink(s) {
   const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
@@ -1356,7 +1530,7 @@ function paragraphs(text) {
   return String(text || "").trim().split(/\n\s*\n/).filter(Boolean)
     .map(p => `<p>${links(escapeHtml(p.trim())).replace(/\n/g, "<br>")}</p>`).join("");
 }
-// the solved puzzle as a picture: logo colours on white, with a faint grid
+// the solved puzzle as a picture: logo colors on white, with a faint grid
 function crigramImage(p) {
   const cell = Math.max(8, Math.floor(480 / Math.max(p.width, p.height)));
   const c = document.createElement("canvas");
@@ -1477,8 +1651,8 @@ async function shareResult(info) {
   // a window with separate choices for the link and the image
   $("shareNative").hidden = !navigator.share;
   $("shareImage").hidden = !canFile;
-  $("shareLink").onclick = async () => { try { await navigator.share({ title: "CRIGram", text }); } catch (e) { /* cancelled */ } };
-  $("shareImage").onclick = async () => { try { await navigator.share({ files: [file], title: "CRIGram" }); } catch (e) { /* cancelled */ } };
+  $("shareLink").onclick = async () => { try { await navigator.share({ title: "CRIGram", text }); } catch (e) { /* canceled */ } };
+  $("shareImage").onclick = async () => { try { await navigator.share({ files: [file], title: "CRIGram" }); } catch (e) { /* canceled */ } };
   $("shareText").textContent = text;
   if (file) {
     const url = URL.createObjectURL(file);
@@ -1541,9 +1715,11 @@ async function showCommunity(p, myTime, myHints) {
 
 // ---------- personal stats page ----------
 // weekly streak: weekly puzzles in a row that were solved within 7 days of their release
+// a puzzle released on another day than Monday is a special (e.g. an awareness day): a bonus outside the streak
+function isSpecial(p) { return !!(p.release && /^\d{4}-\d{2}-\d{2}$/.test(p.release) && weekday(p.release) !== 1); }
 function streaks() {
   const now = Date.now(), WEEK = 6048e5;
-  const weekly = puzzles.map(p => ({ p, t: releaseTime(p) })).filter(o => o.t !== null && o.t <= now);
+  const weekly = puzzles.map(p => ({ p, t: releaseTime(p) })).filter(o => o.t !== null && o.t <= now && !isSpecial(o.p));
   const inTime = weekly.map(o => { const s = stats[o.p.id]; return !!(s && s.first >= o.t && s.first < o.t + WEEK); });
   let longest = 0, run = 0;
   inTime.forEach(v => { run = v ? run + 1 : 0; longest = Math.max(longest, run); });
@@ -1578,7 +1754,7 @@ function renderStats() {
         return `<li><span>${i + 1}. ${escapeHtml(p.title)}</span><span>${fmtTime(r.time)} · ${r.hints ? r.hints + " hint" + (r.hints > 1 ? "s" : "") : "no hints"} · ${date}</span></li>`;
       }).join("")}
     </ul>
-    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time). Your streak counts the weeks in a row in which you solved the new puzzle before the next one came out. The puzzles from the launch week don't count.</p>`;
+    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time), or occasionally on special dates. Your streak counts the weeks in a row in which you solved the Monday puzzle before the next one came out. Special puzzles and the puzzles from the launch week don't count.</p>`;
 }
 $("statsBtn").onclick = () => { renderStats(); showScreen("stats"); };
 $("statsBack").onclick = () => { renderHome(); showScreen("home"); };

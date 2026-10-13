@@ -10,7 +10,7 @@ CRIGram is a free picture logic puzzle (a nonogram) built from figures in resear
 
 - The numbers next to each row and above each column give the lengths of the filled blocks in that line, in order.
 - Between two blocks there is at least one empty cell.
-- Use **Fill** to colour cells and **Blank** to mark cells that stay empty.
+- Use **Fill** to color cells and **Blank** to mark cells that stay empty.
 - Every puzzle can be solved by logic alone, without guessing.
 
 A new puzzle appears every Monday at 06:00 (Brussels time). Solve it within the week to keep your streak going.
@@ -36,7 +36,7 @@ The puzzles are made with a companion tool, the CRIGram maker, which turns a fig
 ## License
 
 - **Code** (the game, the CRIGram maker and their supporting files): [PolyForm Noncommercial License 1.0.0](LICENSE.md). You may use, change and share the code for noncommercial purposes, such as education, research and public outreach.
-- **Puzzles** (the grids, colours, titles and summaries in `crigram.json`): [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/), unless a puzzle states otherwise.
+- **Puzzles** (the grids, colors, titles and summaries in `crigram.json`): [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/), unless a puzzle states otherwise.
 - **Figures** from research papers keep their own license, shown with each puzzle after it is solved.
 
 ## Feedback

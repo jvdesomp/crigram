@@ -114,6 +114,9 @@
   .feedback-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 18px; font-size: 14px; }
   .feedback-card span { color: var(--muted); }
   .feedback-card[hidden] { display: none; }
+  .btn.donate { background: #ef4035; border-color: #ef4035; color: #fff; text-decoration: none; white-space: nowrap; }
+  .donate-box { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
+  .donate-box p { margin: 0; flex: 1 1 220px; font-size: 14px; color: var(--muted); }
 
   /* play */
   .bar { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--card); border-bottom: 1px solid var(--line); }
@@ -203,6 +206,10 @@
     <div class="feedback-card" id="feedbackCard" hidden>
       <div><b>Enjoying CRIGram?</b><br><span>Tell us what you think, or sign up for news from CRIG.</span></div>
       <a class="btn primary" id="feedbackLink" href="#" target="_blank" rel="noopener">Feedback &amp; CRIG news</a>
+    </div>
+    <div class="feedback-card" id="donateCard" hidden>
+      <div style="flex:1 1 220px"><span>The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</span></div>
+      <a class="btn donate" id="donateLink" href="#" target="_blank" rel="noopener">♥ Donate</a>
     </div>
     <div class="links">
       <button class="link" id="statsBtn">Your stats</button>
@@ -601,6 +608,8 @@ function releaseTime(p) {
 const CONFIG = {
   goatcounter: "crigram",
   feedbackUrl: "https://forms.cloud.microsoft/e/20qznW8iRE",
+  // donateUrl: the UGent donation form for CRIG, empty = no donate button
+  donateUrl: "https://actieplatform.ugent.be/en-GB/p/donatieformulier-87a9eb5ec/step-1",
 };
 
 // ---------- storage ----------
@@ -1593,6 +1602,7 @@ function showWin(revisit) {
     </section>
     ${next >= 0 ? '<button class="btn primary wide" id="winNext">Next puzzle</button>'
       : `<p class="done-note">You've solved all puzzles${nextRelease ? `. The next one arrives ${whenText(nextRelease).abs}` : ""}.</p>`}
+    ${CONFIG.donateUrl ? `<section class="box donate-box"><p>The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</p><a class="btn donate" id="winDonate" href="${escapeHtml(CONFIG.donateUrl)}" target="_blank" rel="noopener">♥ Donate</a></section>` : ""}
     <nav class="footer-links">
       <button class="link" id="winHome">All puzzles</button>
       <button class="link" id="reminderLink2">Weekly reminder</button>
@@ -1601,6 +1611,7 @@ function showWin(revisit) {
   showScreen("result");
   window.scrollTo(0, 0);
   $("winHome").onclick = leavePuzzle;
+  if ($("winDonate")) $("winDonate").addEventListener("click", () => track("donate", "Donate button clicked (result page)"));
   // the share image is prepared right away, so the share menu opens instantly on tap
   const shareInfo = { n: curIndex + 1, time: prog.time || 0, hints, p: cur, file: null };
   shareInfo.ready = makeShareCard(shareInfo).then(file => (shareInfo.file = file));
@@ -1798,6 +1809,8 @@ if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
 }
 if (CONFIG.feedbackUrl) { $("feedbackLink").href = CONFIG.feedbackUrl; $("feedbackCard").hidden = false; }
 $("feedbackLink").addEventListener("click", () => track("feedback", "Feedback form opened"));
+if (CONFIG.donateUrl) { $("donateLink").href = CONFIG.donateUrl; $("donateCard").hidden = false; }
+$("donateLink").addEventListener("click", () => track("donate", "Donate button clicked (home)"));
 setupCounting();
 
 function relayout() { if (cur && $("play").classList.contains("active")) { sizeBoard(); drawBoard(); } }

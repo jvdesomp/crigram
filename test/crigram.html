@@ -63,7 +63,7 @@
   .hero p { margin: 4px 0 0; opacity: .9; font-size: 15px; }
   .wrap { width: 100%; max-width: 720px; margin: 0 auto; padding: 16px; }
   .grid-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-  .pcard { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+  .pcard { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: left; display: flex; flex-direction: column; gap: 6px; }
   .pcard:active { transform: scale(.98); }
   .pcard canvas, .pcard img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 6px; background: var(--clue-bg); display: block; image-rendering: pixelated; }
   .pcard img { image-rendering: auto; }
@@ -72,6 +72,7 @@
   .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); margin-left: 4px; }
   .tag.done { background: rgba(31,138,76,.14); color: var(--ok); }
   .tag.special { background: #a54499; color: #fff; }
+  .tag.ribbon { position: absolute; top: 16px; left: 16px; margin: 0; font-size: 12px; font-weight: 600; padding: 2px 9px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .tag.new { background: #fcb033; color: #3a2600; }
   .tag.soon { background: var(--clue-bg); color: var(--muted); }
   .nextup { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 14px; }
@@ -324,7 +325,7 @@
       <li>Every puzzle can be solved by logic alone. No guessing needed!</li>
       <li>Cells too small? Use <b>+</b> and <b>−</b> to zoom. Drag along the clue numbers (or with two fingers) to move around; the mini-map in the corner shows where you are.</li>
       <li>Stuck? The bulb gives you a hint.</li>
-      <li>A new puzzle appears every Monday at 06:00 (Brussels time), or occasionally on special dates. Solve the Monday puzzle within the week to keep your streak going; special puzzles are a bonus and never break your streak. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
+      <li>A new puzzle appears every Monday at 06:00 (Brussels time<span class="localTime"></span>), or occasionally on special dates. Solve the Monday puzzle within the week to keep your streak going; special puzzles are a bonus and never break your streak. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
     </ul>
     <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
     <p class="sub" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>About:</b> CRIGram was created by Jo Vandesompele (CRIG, Ghent University), with code written with the help of Claude (Opus 5.5), an AI assistant by Anthropic. Code: PolyForm Noncommercial 1.0.0. Puzzles: CC BY-NC-SA 4.0. Figures keep their own license.</p>
@@ -565,6 +566,17 @@ function releaseISO(dateStr) {
   const sign = off < 0 ? "-" : "+", a = Math.abs(off);
   return `${dateStr}T${String(RELEASE_HOUR).padStart(2, "0")}:00:00${sign}${String(Math.floor(a / 60)).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`;
 }
+// the release time in the player's own time zone, when that differs from Brussels, e.g. "Sunday 23:00 where you are"
+function localTimeNote(tz) {
+  const t = releaseMoment(nextMonday());
+  const f = (zone, o) => new Date(t).toLocaleString("en-GB", { ...o, timeZone: zone });
+  const hm = { hour: "2-digit", minute: "2-digit" };
+  const local = f(tz, hm), brussels = f(RELEASE_TZ, hm);
+  if (local === brussels) return "";
+  const day = f(tz, { weekday: "long" }), bxlDay = f(RELEASE_TZ, { weekday: "long" });
+  return (day !== bxlDay ? day + " " : "") + local + " where you are";
+}
+const localTimeSuffix = tz => { const n = localTimeNote(tz); return n ? "; " + n : ""; };
 function brusselsDate(ts) { const p = tzParts(ts, RELEASE_TZ); return `${p.year}-${p.month}-${p.day}`; }
 function addDays(dateStr, n) {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -792,13 +804,13 @@ function renderHome() {
     const name = prog && prog.solved ? p.title : "Puzzle " + (i + 1);
     const rt = releaseTime(p);
     const status = (rt !== null && rt > now ? `<span class="tag soon">scheduled ${new Date(rt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>` : "") +
-      (isSpecial(p) ? '<span class="tag special">special</span>' : "") +
       (rt !== null && rt <= now && now - rt < 6048e5 ? '<span class="tag new">new this week</span>' : "") +
       (prog && prog.solved
         ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
         : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "");
     const mins = p.difficulty && p.difficulty.minutes != null ? ` · ≈ ${Math.max(1, Math.round(p.difficulty.minutes))} min` : "";
     b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${stars(p)}${mins}${status}</small>`);
+    if (isSpecial(p)) b.insertAdjacentHTML("beforeend", '<span class="tag special ribbon">special</span>');
     b.onclick = () => openPuzzle(i);
     list.appendChild(b);
   });
@@ -964,6 +976,7 @@ $("resetBtn").onclick = () => {
   progress = {}; saveProgress(); stats = {}; saveStats(); renderHome(); renderStats();
 };
 $("howBtn").onclick = () => $("howBg").classList.add("show");
+document.querySelectorAll(".localTime").forEach(el => { el.textContent = localTimeSuffix(); });
 document.querySelectorAll(".sheet-bg").forEach(bg => bg.addEventListener("click", e => {
   if (e.target === bg || e.target.hasAttribute("data-close")) bg.classList.remove("show");
 }));
@@ -1754,7 +1767,7 @@ function renderStats() {
         return `<li><span>${i + 1}. ${escapeHtml(p.title)}</span><span>${fmtTime(r.time)} · ${r.hints ? r.hints + " hint" + (r.hints > 1 ? "s" : "") : "no hints"} · ${date}</span></li>`;
       }).join("")}
     </ul>
-    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time), or occasionally on special dates. Your streak counts the weeks in a row in which you solved the Monday puzzle before the next one came out. Special puzzles and the puzzles from the launch week don't count.</p>`;
+    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time${localTimeSuffix()}), or occasionally on special dates. Your streak counts the weeks in a row in which you solved the Monday puzzle before the next one came out. Special puzzles and the puzzles from the launch week don't count.</p>`;
 }
 $("statsBtn").onclick = () => { renderStats(); showScreen("stats"); };
 $("statsBack").onclick = () => { renderHome(); showScreen("home"); };

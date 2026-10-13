@@ -671,8 +671,22 @@ function preparePuzzles(data) {
       q.cellColors = [];
       p.colors.forEach(s => { for (let c = 0; c < W; c++) q.cellColors.push(p.palette[+s[c]] || CRIG_COLORS[0]); });
     }
+    if (p.orientation && p.orientation !== "none" && ORIENTATIONS[p.orientation]) q.play = turnedVersion(q);
     return q;
   });
+}
+
+// the version players solve: same puzzle, turned or mirrored; it keeps a link to the original for the reveal
+function turnedVersion(q) {
+  const s = orientCells(Array.from(q.sol), q.width, q.height, q.orientation);
+  const W = s.width, H = s.height, sol = Uint8Array.from(s.cells);
+  const rows = [], cols = [];
+  for (let r = 0; r < H; r++) rows.push(lineClue(sol.subarray(r * W, (r + 1) * W)));
+  for (let c = 0; c < W; c++) { const col = []; for (let r = 0; r < H; r++) col.push(sol[r * W + c]); cols.push(lineClue(col)); }
+  const play = { ...q, width: W, height: H, sol, rows, cols, isTurned: true, original: q };
+  if (q.cellColors) play.cellColors = orientCells(q.cellColors, q.width, q.height, q.orientation).cells;
+  delete play.play;
+  return play;
 }
 
 let puzzles = [];        // the puzzles a player can see now, in release order
@@ -747,6 +761,29 @@ function stars(p) {
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
+// ---------- orientation while solving ----------
+// A puzzle can be shown turned or mirrored while it is being solved (chosen per puzzle in the maker,
+// the same for every player), so a recognizable picture such as digits or a logo does not give itself away.
+// map(r, c, W, H) gives the place in the turned grid of original cell (r, c); swap: width and height trade places;
+// back: the CSS transform that turns the shown grid into place again at the reveal.
+const ORIENTATIONS = {
+  none: { name: "as designed", swap: false, map: (r, c) => [r, c], back: "" },
+  rot90: { name: "turned right (90°)", swap: true, map: (r, c, W, H) => [c, H - 1 - r], back: "rotate(-90deg)" },
+  rot180: { name: "upside down (180°)", swap: false, map: (r, c, W, H) => [H - 1 - r, W - 1 - c], back: "rotate(180deg)" },
+  rot270: { name: "turned left (90°)", swap: true, map: (r, c, W) => [W - 1 - c, r], back: "rotate(90deg)" },
+  flipH: { name: "mirrored left-right", swap: false, map: (r, c, W) => [r, W - 1 - c], back: "rotateY(180deg)" },
+  flipV: { name: "mirrored top-bottom", swap: false, map: (r, c, W, H) => [H - 1 - r, c], back: "rotateX(180deg)" },
+  transpose: { name: "mirrored on the \\ diagonal", swap: true, map: (r, c) => [c, r], back: "rotate3d(1, 1, 0, 180deg)" },
+  antitranspose: { name: "mirrored on the / diagonal", swap: true, map: (r, c, W, H) => [W - 1 - c, H - 1 - r], back: "rotate3d(1, -1, 0, 180deg)" },
+};
+// turns a flat array of W x H cells into the chosen orientation
+function orientCells(arr, W, H, key) {
+  const o = ORIENTATIONS[key] || ORIENTATIONS.none, W2 = o.swap ? H : W;
+  const out = new Array(W * H);
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) { const [r2, c2] = o.map(r, c, W, H); out[r2 * W2 + c2] = arr[r * W + c]; }
+  return { cells: out, width: W2, height: o.swap ? W : H };
+}
+
 // ---------- CRIG logo colors ----------
 const CRIG_COLORS = ["#0079c1", "#13b5ea", "#73c167", "#fcb033", "#ef4035", "#f490af", "#a54499"];
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -774,7 +811,8 @@ function showScreen(id) {
   document.body.classList.toggle("playing", id === "play");
   window.scrollTo(0, 0);
 }
-function thumbCanvas(p, prog) {
+function thumbCanvas(base, prog) {
+  const p = prog && !prog.solved && base.play ? base.play : base;
   const c = document.createElement("canvas");
   const cell = Math.max(2, Math.floor(120 / Math.max(p.width, p.height)));
   c.width = p.width * cell; c.height = p.height * cell;
@@ -1016,11 +1054,15 @@ let revealAlpha = 0;
 let revealImg = null;
 
 function openPuzzle(i) {
-  cur = puzzles[i]; curIndex = i;
-  const prog = progress[cur.id] || {};
-  cells = new Uint8Array(cur.width * cur.height);
-  if (prog.cells && prog.cells.length === cells.length) for (let k = 0; k < cells.length; k++) cells[k] = +prog.cells[k];
+  board.style.transition = "none"; board.style.transform = "";   // never start with a grid left turned
+  const base = puzzles[i];
+  const prog = progress[base.id] || {};
   solved = !!prog.solved;
+  cur = !solved && base.play ? base.play : base; curIndex = i;
+  cells = new Uint8Array(cur.width * cur.height);
+  // progress saved in another orientation (the maker changed it) would not fit: start that puzzle again
+  const sameOrientation = (prog.o || "none") === (cur.isTurned ? cur.orientation : "none");
+  if (prog.cells && prog.cells.length === cells.length && sameOrientation) for (let k = 0; k < cells.length; k++) cells[k] = +prog.cells[k];
   elapsed = prog.time || 0;
   startedAt = 0;
   undoStack = [];
@@ -1065,7 +1107,7 @@ function updateMeta() {
 function persist() {
   if (!cur) return;
   const prev = progress[cur.id] || {};
-  progress[cur.id] = { ...prev, cells: Array.from(cells).join(""), time: Math.round(currentTime()), solved };
+  progress[cur.id] = { ...prev, cells: Array.from(cells).join(""), time: Math.round(currentTime()), solved, o: cur.isTurned ? cur.orientation : "none" };
   saveProgress();
 }
 function leavePuzzle() {
@@ -1177,6 +1219,7 @@ function lineDone(idx) {
   return got.length === want.length && got.every((v, i) => v === want[i]);
 }
 let mini = null;   // where the mini-map is drawn, for tapping on it
+let hideClues = false;   // during the turn at the reveal, the clue numbers are left out
 function drawBoard() {
   if (!cur || !layout) return;
   const { left, top, cs, slot, fs, pad, tw, th, dpr, vw, vh } = layout;
@@ -1187,10 +1230,11 @@ function drawBoard() {
   ctx.clearRect(0, 0, tw, th);
   const C = { ink: css("--ink"), muted: css("--muted"), clue: css("--clue-bg"), cell: css("--cell"), crossed: css("--crossed"), line: css("--line"), focus: css("--focus"), blue: css("--blue") };
 
+  const fr = focusCell >= 0 ? Math.floor(focusCell / W) : -1, fc = focusCell >= 0 ? focusCell % W : -1;
+  if (!hideClues) {
   ctx.fillStyle = C.clue;
   ctx.fillRect(0, top, left, vh);
   ctx.fillRect(left, 0, vw, top);
-  const fr = focusCell >= 0 ? Math.floor(focusCell / W) : -1, fc = focusCell >= 0 ? focusCell % W : -1;
 
   // clue numbers, pinned to the edges and scrolled with the grid
   ctx.font = `600 ${fs}px -apple-system, BlinkMacSystemFont, sans-serif`;
@@ -1220,6 +1264,7 @@ function drawBoard() {
   });
   ctx.restore();
   ctx.globalAlpha = 1;
+  }
 
   // the grid itself
   ctx.save();
@@ -1505,6 +1550,32 @@ function checkWin() {
   $("infoBtn").hidden = false;
   updateMeta();
   focusCell = -1;
+  colorWave = -1;   // keep the play colors until the reveal starts (after turning into place)
+  if (cur.isTurned) { turnIntoPlace(); return; }
+  startReveal();
+}
+// the grid turns (or flips) back into its designed orientation, then the colors appear
+function turnIntoPlace() {
+  const turned = cur, back = ORIENTATIONS[turned.orientation].back;
+  const finish = () => {
+    if (cur !== turned) return;
+    board.style.transition = "none"; board.style.transform = "";
+    cur = turned.original;
+    cells = Uint8Array.from(cur.sol, v => (v ? 1 : 2));
+    hideClues = false;
+    sizeBoard(); drawBoard();
+    startReveal();
+  };
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { finish(); return; }
+  hideClues = true;
+  drawBoard();
+  board.style.transformOrigin = `${layout.left + layout.vw / 2}px ${layout.top + layout.vh / 2}px`;
+  board.style.transition = "transform .8s ease-in-out";
+  // only start the turn if it has not been finished already (a busy browser can delay animation frames)
+  requestAnimationFrame(() => requestAnimationFrame(() => { if (cur === turned) board.style.transform = `perspective(900px) ${back}`; }));
+  setTimeout(finish, 900);
+}
+function startReveal() {
   const t0 = performance.now();
   colorWave = 0;
   const anim = now => {
@@ -1561,7 +1632,8 @@ function paperLink(s) {
 }
 // paragraphs on empty lines; [link text](https://...) becomes a link
 function paragraphs(text) {
-  const links = s => s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a class="text-link" href="$2" target="_blank" rel="noopener">$1</a>');
+  // [text](https://…), also with a space or line break between ] and (
+  const links = s => s.replace(/\[([^\]]+)\]\s*\((https?:\/\/[^\s)]+)\)/g, '<a class="text-link" href="$2" target="_blank" rel="noopener">$1</a>');
   return String(text || "").trim().split(/\n\s*\n/).filter(Boolean)
     .map(p => `<p>${links(escapeHtml(p.trim())).replace(/\n/g, "<br>")}</p>`).join("");
 }

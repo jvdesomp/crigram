@@ -750,12 +750,22 @@ function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, c => ({ "&":
 // ---------- CRIG logo colors ----------
 const CRIG_COLORS = ["#0079c1", "#13b5ea", "#73c167", "#fcb033", "#ef4035", "#f490af", "#a54499"];
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-// a fixed "random" color per cell, so colors do not change while playing
-function cellColor(p, i) {
-  if (p.cellColors) return p.cellColors[i];
+// While playing, every filled cell gets a fixed "random" color that depends only on its position,
+// never on the solution: filling the whole grid then shows colorful noise, not the picture.
+function playColor(p, i) {
   let h = (hashStr(p.id) ^ Math.imul(i + 1, 2654435761)) >>> 0;
   h ^= h >>> 15; h = Math.imul(h, 2246822519) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
   return CRIG_COLORS[h % CRIG_COLORS.length];
+}
+// The colors chosen in the maker only appear once the puzzle is solved.
+function revealColor(p, i) { return p.cellColors ? p.cellColors[i] : playColor(p, i); }
+// on the board: play colors, then (when solved) a diagonal wave that turns cells into their real colors
+let colorWave = 1;
+function boardColor(i) {
+  if (!solved) return playColor(cur, i);
+  if (colorWave >= 1) return revealColor(cur, i);
+  const W = cur.width, H = cur.height, r = Math.floor(i / W), c = i % W;
+  return (r + c) / Math.max(1, W + H - 2) <= colorWave ? revealColor(cur, i) : playColor(cur, i);
 }
 
 // ---------- home ----------
@@ -773,7 +783,7 @@ function thumbCanvas(p, prog) {
   const cells = prog && prog.cells;
   for (let i = 0; i < p.width * p.height; i++) {
     const v = prog && prog.solved ? p.sol[i] : (cells ? +cells[i] === 1 : 0);
-    ctx.fillStyle = cellColor(p, i);
+    ctx.fillStyle = prog && prog.solved ? revealColor(p, i) : playColor(p, i);
     if (v) ctx.fillRect((i % p.width) * cell, Math.floor(i / p.width) * cell, cell, cell);
   }
   ctx.strokeStyle = css("--line"); ctx.lineWidth = 1;
@@ -1016,6 +1026,7 @@ function openPuzzle(i) {
   undoStack = [];
   focusCell = -1; flash = null;
   revealAlpha = solved ? 1 : 0;
+  colorWave = 1;
   revealImg = null;
   if (cur.image) { revealImg = new Image(); revealImg.onload = drawBoard; revealImg.src = cur.image; }
   if (solved) for (let k = 0; k < cells.length; k++) cells[k] = cur.sol[k] ? 1 : 2;
@@ -1218,7 +1229,7 @@ function drawBoard() {
   const r0 = Math.max(0, Math.floor(oy / cs)), r1 = Math.min(H, Math.ceil((oy + vh) / cs));
   for (let r = r0; r < r1; r++) for (let c = c0; c < c1; c++) {
     const i = r * W + c, v = cells[i];
-    ctx.fillStyle = v === 1 ? cellColor(cur, i) : v === 2 ? C.crossed : C.cell;
+    ctx.fillStyle = v === 1 ? boardColor(i) : v === 2 ? C.crossed : C.cell;
     ctx.fillRect(c * cs, r * cs, cs, cs);
   }
   if (flash && flash.until > performance.now()) {
@@ -1255,7 +1266,7 @@ function drawBoard() {
       ctx.fillStyle = C.cell; ctx.fillRect(mx, my, mw, mh);
       for (let i = 0; i < W * H; i++) {
         if (cells[i] === 0) continue;
-        ctx.fillStyle = cells[i] === 1 ? cellColor(cur, i) : C.crossed;
+        ctx.fillStyle = cells[i] === 1 ? boardColor(i) : C.crossed;
         ctx.fillRect(mx + (i % W) * m, my + Math.floor(i / W) * m, Math.ceil(m), Math.ceil(m));
       }
       ctx.strokeStyle = C.blue; ctx.lineWidth = 2;
@@ -1495,16 +1506,18 @@ function checkWin() {
   updateMeta();
   focusCell = -1;
   const t0 = performance.now();
+  colorWave = 0;
   const anim = now => {
-    const t = Math.min(1, (now - t0 - 500) / 1200);
+    colorWave = Math.min(1, (now - t0) / 900);              // 1. the cells take on their real colors
+    const t = Math.min(1, (now - t0 - 1300) / 1200);         // 2. then the figure fades in
     revealAlpha = cur.image ? Math.max(0, t) : 0;
     drawBoard();
-    if (t < 1 && cur === p) requestAnimationFrame(anim);
+    if ((t < 1 || colorWave < 1) && cur === p) requestAnimationFrame(anim);
   };
   const p = cur;
   drawBoard();
   requestAnimationFrame(anim);
-  setTimeout(() => { if (cur === p) { revealAlpha = cur.image ? 1 : 0; drawBoard(); showWin(); } }, 2100);
+  setTimeout(() => { if (cur === p) { colorWave = 1; revealAlpha = cur.image ? 1 : 0; drawBoard(); showWin(); } }, 2900);
 }
 // the source of the figure as one card: citation, DOI and license, and a link to the paper
 function researchHtml(s) {
@@ -1561,7 +1574,7 @@ function crigramImage(p) {
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
   for (let i = 0; i < p.width * p.height; i++) {
     if (!p.sol[i]) continue;
-    ctx.fillStyle = cellColor(p, i);
+    ctx.fillStyle = revealColor(p, i);
     ctx.fillRect((i % p.width) * cell, Math.floor(i / p.width) * cell, cell, cell);
   }
   ctx.strokeStyle = "rgba(120,130,150,.25)"; ctx.lineWidth = 1;

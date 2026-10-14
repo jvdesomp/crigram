@@ -1760,17 +1760,19 @@ async function shareResult(info) {
   if (!info.file && info.ready) await info.ready;   // tapped before the card image was ready
   const file = info.file;
   const canFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
-  // phones: one tap shares the card and the text together
-  if (window.matchMedia("(pointer: coarse)").matches && (canFile || navigator.share)) {
+  // phones: one tap shares the card and the text together. Not on iPhone and iPad: there, many apps
+  // (WhatsApp among them) only receive the text when an image and text are shared together
+  const apple = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (window.matchMedia("(pointer: coarse)").matches && !(apple && canFile) && (canFile || navigator.share)) {
     try { await navigator.share(canFile ? { files: [file], text, title: "CRIGram" } : { title: "CRIGram", text }); return; }
     catch (e) { if (e && e.name === "AbortError") return; }
   }
-  // computers (where sharing an image usually drops the text) and browsers without a share menu:
+  // iPhone, iPad, computers (where sharing an image usually drops the text) and browsers without a share menu:
   // a window with separate choices for the link and the image
   $("shareNative").hidden = !navigator.share;
   $("shareImage").hidden = !canFile;
   $("shareLink").onclick = async () => { try { await navigator.share({ title: "CRIGram", text }); } catch (e) { /* canceled */ } };
-  $("shareImage").onclick = async () => { try { await navigator.share({ files: [file], title: "CRIGram" }); } catch (e) { /* canceled */ } };
+  $("shareImage").onclick = async () => { try { await navigator.share({ files: [file] }); } catch (e) { /* canceled */ } };
   $("shareText").textContent = text;
   if (file) {
     const url = URL.createObjectURL(file);

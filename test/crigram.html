@@ -736,6 +736,11 @@ function setupCounting() {
   document.head.appendChild(s);
   $("privacyNote").hidden = false;
 }
+// device type for the exact solve-time events, decided once per visit
+const DEVICE = (() => {
+  const s = Math.min(screen.width, screen.height);
+  return s < 600 ? "phone" : s < 1024 && navigator.maxTouchPoints > 0 ? "tablet" : "computer";
+})();
 function timeBucket(sec) {
   return sec < 60 ? "under-1-min" : sec < 120 ? "1-2-min" : sec < 300 ? "2-5-min" : sec < 600 ? "5-10-min" : sec < 1200 ? "10-20-min" : "over-20-min";
 }
@@ -1530,6 +1535,10 @@ function recordSolve() {
   track(`solved/${cur.id}`, `Puzzle ${n} solved${name}`);
   track(`solved/${cur.id}/time-${timeBucket(time)}`, `Puzzle ${n} solve time${name}`);
   track(`solved/${cur.id}/hints-${hints === 0 ? "0" : hints === 1 ? "1" : "2-or-more"}`, `Puzzle ${n} hints used${name}`);
+  // exact values since 14 October 2026: whole minutes per device type, and the exact number of hints
+  const m = Math.floor(time / 60), mins = m < 60 ? String(m) : "60plus";
+  track(`solved/${cur.id}/min/${DEVICE}/${mins}`, `Puzzle ${n} solved in ${m < 60 ? m : "60+"} min on ${DEVICE}${name}`);
+  track(`solved/${cur.id}/hints/${hints < 10 ? hints : "10plus"}`, `Puzzle ${n} solved with ${hints < 10 ? hints : "10+"} hint${hints === 1 ? "" : "s"}${name}`);
 }
 function bumpHints() {
   const prev = progress[cur.id] || {};

@@ -1885,8 +1885,19 @@ function updateInstallLink() {
   const touch = window.matchMedia("(pointer: coarse)").matches;
   $("installBtn").hidden = isStandalone() || !/^https?:/.test(location.protocol) || !(installEvent || touch);
 }
+// An install is counted once per device: Chrome and Edge announce it ("appinstalled"), Safari on iPhone and iPad
+// never does, so the first launch from the home screen counts too. An iPhone home-screen app has its own storage,
+// which starts empty after every (re)install; on Android and computers the app shares storage with the browser,
+// so the flag set at "appinstalled" stops its first launch from counting a second time.
+const INSTALL_KEY = "crigram.installCounted" + KEY_SUFFIX;
+function countInstall(how) {
+  try { if (localStorage.getItem(INSTALL_KEY)) return; localStorage.setItem(INSTALL_KEY, new Date().toISOString()); }
+  catch (e) { return; }   // without storage it would count on every launch
+  track("installed", "App installed" + how);
+}
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvent = e; updateInstallLink(); });
-window.addEventListener("appinstalled", () => { installEvent = null; $("installBtn").hidden = true; track("installed", "App installed"); });
+window.addEventListener("appinstalled", () => { installEvent = null; $("installBtn").hidden = true; countInstall(""); });
+if (isStandalone()) countInstall(" (first launch from the home screen)");
 updateInstallLink();
 $("installBtn").onclick = async () => {
   if (installEvent) {

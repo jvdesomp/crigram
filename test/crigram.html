@@ -1762,7 +1762,7 @@ async function shareResult(info) {
   const canFile = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
   // phones: one tap shares the card and the text together
   if (window.matchMedia("(pointer: coarse)").matches && (canFile || navigator.share)) {
-    try { await navigator.share(canFile ? { files: [file], text, title: "CRIGram" } : { title: "CRIGram", text }); return; }
+    try { await navigator.share(canFile ? { files: [file], text } : { title: "CRIGram", text }); return; }
     catch (e) { if (e && e.name === "AbortError") return; }
   }
   // computers (where sharing an image usually drops the text) and browsers without a share menu:

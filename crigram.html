@@ -345,6 +345,17 @@
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
   </div>
 </div>
+<div class="sheet-bg" id="linkBg">
+  <div class="sheet">
+    <h2 id="linkTitle">Puzzle</h2>
+    <div class="sub" id="linkSub"></div>
+    <p>New to CRIGram? Warm up first with a quick practice puzzle: it shows you how it works in about a minute.</p>
+    <div class="actions" style="flex-direction:column">
+      <button class="btn primary" id="linkPractice">Practice first</button>
+      <button class="btn" id="linkGo">Go to the puzzle</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -624,6 +635,18 @@ const CONFIG = {
 const SITE_DIR = location.pathname.replace(/[^/]*$/, "");
 const IS_TEST = /(\/test|-test)\/$/.test(SITE_DIR);
 const KEY_SUFFIX = IS_TEST ? "@test" : "";
+// a link to one puzzle, …/crigram/?p=<game code>, shared by a player or sent by the authors of the paper;
+// the code is taken out of the address right away, so a reload starts at home and GoatCounter counts the page as usual
+const LINKED = (() => {
+  try {
+    const u = new URL(location.href), code = u.searchParams.get("p");
+    if (!code) return null;
+    u.searchParams.delete("p");
+    history.replaceState(null, "", u.pathname + u.search + u.hash);
+    return code;
+  } catch (e) { return null; }
+})();
+let linkTarget = null;   // the linked puzzle, opened after the practice puzzle
 const PUZZLES_KEY = "crigram.puzzles" + KEY_SUFFIX, PROGRESS_KEY = "crigram.progress" + KEY_SUFFIX;
 function readJSON(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
 function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch (e) { return false; } }
@@ -935,6 +958,29 @@ function openReminder() {
   setTimeout(() => $("reminderBg").classList.remove("show"), 300);
 }));
 
+// a one-time reminder for a linked puzzle that is not out yet, at 08:00 Brussels time on its release day
+function puzzleReminder(p, t) {
+  const at = t + 2 * 3600e3, end = at + 15 * 60e3, link = `${gameUrl()}?p=${encodeURIComponent(p.id)}`;
+  const utc = ms => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+  const text = "CRIGram puzzle is out", details = `The CRIGram puzzle you were sent is ready: cell by cell, decoding our science.\n${link}`;
+  const esc = v => v.replace(/[\\;,]/g, m => "\\" + m).replace(/\n/g, "\\n");
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CRIG//CRIGram//EN", "BEGIN:VEVENT",
+    `UID:crigram-${p.id}@jvdesomp.github.io`, `DTSTAMP:${utc(Date.now())}`, `DTSTART:${utc(at)}`, `DTEND:${utc(end)}`,
+    `SUMMARY:${esc(text)}`, `DESCRIPTION:${esc(details)}`, `URL:${link}`,
+    "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc(text)}`, "TRIGGER:PT0M", "END:VALARM",
+    "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+  $("calOne").onclick = () => {
+    track("reminder/puzzle", "Puzzle reminder added");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+    a.download = "crigram-puzzle.ics";
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  const q = new URLSearchParams({ action: "TEMPLATE", text, dates: `${utc(at)}/${utc(end)}`, details });
+  $("calGoogle").href = "https://calendar.google.com/calendar/render?" + q.toString();
+  $("calGoogle").onclick = () => track("reminder/puzzle", "Puzzle reminder added");
+}
+
 // ---------- messages to returning players ----------
 const VISIT_KEY = "crigram.lastVisit" + KEY_SUFFIX;
 let lastVisit = readJSON(VISIT_KEY, null), hiddenAt = 0, noticeShown = false;
@@ -1038,6 +1084,37 @@ function afterLoad() {
   noticeShown = true;
   showNotice(lastVisit);
   markVisit();
+  openFromLink();
+}
+// newcomers who arrive through a puzzle link may warm up with the practice puzzle first
+function openFromLink() {
+  const p = LINKED && allPuzzles.find(q => q.id === LINKED);
+  if (!p) return;
+  if (p.practice) { openPuzzle(-1); return; }
+  const i = puzzles.indexOf(p);
+  if (i < 0) {   // not out yet: say when it appears
+    const t = releaseTime(p);
+    if (t) {
+      const w = whenText(t);
+      $("noticeText").innerHTML = `This puzzle appears on <b>${w.abs}</b> (${w.rel}). See you then! ` +
+        '<button class="link" id="calOne">Add to calendar</button> · <a class="link" id="calGoogle" target="_blank" rel="noopener">Google Calendar</a>';
+      $("notice").hidden = false;
+      puzzleReminder(p, t);
+    }
+    return;
+  }
+  track("linked", "Arrived through a puzzle link");
+  track(`linked/${p.id}`, `Puzzle ${i + 1} opened from a link`);
+  const done = q => !!(progress[q.id] && progress[q.id].solved);
+  const newcomer = practice && !done(practice) && !puzzles.some(done);
+  if (!newcomer) { openPuzzle(i); return; }
+  const d = p.difficulty;
+  $("linkTitle").textContent = `Puzzle ${i + 1}`;
+  $("linkSub").textContent = `${p.width} × ${p.height}` + (d ? ` · ${d.label} ${stars(p)} · about ${Math.max(1, Math.round(d.minutes))} min` : "");
+  $("linkGo").textContent = `Go to puzzle ${i + 1}`;
+  $("linkPractice").onclick = () => { $("linkBg").classList.remove("show"); linkTarget = p.id; openPuzzle(-1); };
+  $("linkGo").onclick = () => { $("linkBg").classList.remove("show"); openPuzzle(i); };
+  $("linkBg").classList.add("show");
 }
 function pickFile() { $("fileInput").click(); }
 $("openFileBtn").onclick = pickFile;
@@ -1703,7 +1780,12 @@ function crigramImage(p) {
 function showWin(revisit) {
   const prog = progress[cur.id] || {};
   const hints = prog.hints || 0;
-  const next = puzzles.findIndex((p, i) => i > curIndex && !(progress[p.id] && progress[p.id].solved));
+  let next = puzzles.findIndex((p, i) => i > curIndex && !(progress[p.id] && progress[p.id].solved));
+  // after the practice puzzle, a player who came through a puzzle link goes on to that puzzle
+  if (isPractice() && linkTarget && !(progress[linkTarget] && progress[linkTarget].solved)) {
+    const j = puzzles.findIndex(p => p.id === linkTarget);
+    if (j >= 0) next = j;
+  }
   const s = cur.source || {};
   const pairClass = cur.image ? "compare" : "compare single";
   const layTitle = cur.layTitle || cur.headline || "";
@@ -1760,7 +1842,8 @@ $("resultBack").onclick = leavePuzzle;
 function gameUrl() { return location.href.split("#")[0].split("?")[0].replace(/[^/]*$/, ""); }
 function shareText(info) {
   const { n, time, hints } = info;
-  return `I decoded CRIGram #${n} in ${fmtTime(time)}${hints ? ` with ${hints} hint${hints > 1 ? "s" : ""}` : " without hints"} 🧬 Can you crack it? ${gameUrl()}`;
+  // the link opens this same puzzle for whoever receives it
+  return `I decoded CRIGram #${n} in ${fmtTime(time)}${hints ? ` with ${hints} hint${hints > 1 ? "s" : ""}` : " without hints"} 🧬 Can you crack it? ${gameUrl()}?p=${encodeURIComponent(info.p.id)}`;
 }
 // a spoiler-free result card: number, time, hints, difficulty, but not the picture
 function makeShareCard(info) {

@@ -174,9 +174,12 @@
   .album-line .track { flex: 0 0 80px; height: 8px; border-radius: 4px; background: var(--clue-bg); overflow: hidden; }
   .album-line .track i { display: block; height: 100%; background: var(--blue); }
   .album-line .go { margin-left: auto; color: var(--muted); }
-  .together { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; background: var(--blue-soft); border-radius: 12px; padding: 10px 14px; margin: 14px 0; font-size: 14px; }
+  .together { background: var(--blue-soft); border-radius: 12px; padding: 10px 14px 12px; margin: 14px 0; }
   .together[hidden] { display: none; }
-  .together span { color: var(--ink); }
+  .together .head { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .together .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .together .scores b { display: block; font-size: 26px; font-weight: 800; line-height: 1.1; color: var(--blue); font-variant-numeric: tabular-nums; }
+  .together .scores small { display: block; font-size: 12px; line-height: 1.3; color: var(--muted); }
   .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .album-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px; text-align: left; display: flex; flex-direction: column; gap: 6px; font: inherit; color: var(--ink); cursor: pointer; }
   .album-item img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 6px; background: #fff; display: block; }
@@ -694,6 +697,7 @@ const LINKED = (() => {
   } catch (e) { return null; }
 })();
 let linkTarget = null;   // the linked puzzle, opened after the practice puzzle
+let playedSent = false;  // the "played" event goes once per visit
 const PUZZLES_KEY = "crigram.puzzles" + KEY_SUFFIX, PROGRESS_KEY = "crigram.progress" + KEY_SUFFIX;
 function readJSON(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
 function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch (e) { return false; } }
@@ -962,7 +966,7 @@ function renderHome() {
     const status = (rt !== null && rt > now ? `<span class="tag soon">scheduled ${new Date(rt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>` : "") +
       (rt !== null && rt <= now && now - rt < 6048e5 ? '<span class="tag new">new this week</span>' : "") +
       (prog && prog.solved
-        ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}</span>`
+        ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}${prog.hints ? ` · 💡 ${prog.hints}` : ""}</span>`
         : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "");
     const level = p.difficulty && p.difficulty.label ? `${p.difficulty.label} ` : "";
     b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${level}${stars(p)}${status}</small>`);
@@ -1539,6 +1543,8 @@ board.addEventListener("pointerdown", e => {
   undoStack.push(cells.slice());
   if (undoStack.length > 200) undoStack.shift();
   stroke = { start: p, snap: cells.slice(), target, action, axis: null };
+  // once per visit, at the first move in any puzzle: tells players apart from visitors who only look around
+  if (!playedSent) { playedSent = true; track("played", "Played (first move of a visit)"); }
   if (!elapsed && !startedAt && !cells.some(v => v)) {
     if (isPractice()) track("practice/start", "Practice puzzle started");
     else track(`start/${cur.id}`, `Puzzle ${curIndex + 1} started`);
@@ -2090,15 +2096,19 @@ $("albumLine").onclick = () => { renderAlbum(); showScreen("album"); window.scro
 $("albumBack").onclick = () => { renderHome(); showScreen("home"); };
 
 // ---------- together: what all players achieved, from GoatCounter's public counts ----------
-// the hours are estimated from each puzzle's difficulty estimate (a typical player's time) times its solves
+// the time of all players: per puzzle its solves times the average solve time, read from its six time ranges
+// (all solves since launch); a puzzle with fewer than 3 solves uses its difficulty estimate instead
 const TOGETHER_KEY = "crigram.together" + KEY_SUFFIX;
 function showTogether(t) {
   const box = $("together");
   box.hidden = !t || t.solves < 20;   // only once there is something to celebrate
   if (box.hidden) return;
-  const h = t.minutes / 60, time = h >= 2 ? `about ${Math.round(h).toLocaleString("en-GB")} hours` : `about ${Math.round(t.minutes)} minutes`;
-  box.innerHTML = `<b>Together</b><span>${t.solves.toLocaleString("en-GB")} puzzles solved</span><span>${time} of puzzling</span>` +
-    `<span>${t.papers} cancer research paper${t.papers === 1 ? "" : "s"} in the spotlight</span>`;
+  const h = t.minutes / 60, hours = h >= 2;
+  const score = (n, label) => `<div><b>${n}</b><small>${label}</small></div>`;
+  box.innerHTML = '<div class="head">All players so far</div><div class="scores">' +
+    score(t.solves.toLocaleString("en-GB"), "puzzles solved") +
+    score(hours ? Math.round(h).toLocaleString("en-GB") : Math.round(t.minutes), hours ? "hours of puzzling" : "minutes of puzzling") +
+    score(t.papers, `cancer research paper${t.papers === 1 ? "" : "s"} in the spotlight`) + "</div>";
 }
 async function loadTogether() {
   if (!CONFIG.goatcounter || !/^https?:/.test(location.protocol)) return;
@@ -2106,10 +2116,17 @@ async function loadTogether() {
   const cached = readJSON(TOGETHER_KEY, null);
   if (cached) showTogether(cached);
   if (cached && now - cached.at < 3 * 3600e3 && cached.n === live.length) return;   // at most every 3 hours
+  const MID = [0.5, 1.5, 3.5, 7.5, 15, 30];   // minutes in the middle of each time range; "over 20 minutes" counts as 30
   const counts = await Promise.all(live.map(p => gcCount(`solved/${p.id}`)));
   if (counts.some(c => c === null)) return;
+  const ranges = await Promise.all(live.map((p, k) => counts[k] >= 3 ? Promise.all(BUCKETS.map(b => gcCount(`solved/${p.id}/time-${b[0]}`))) : null));
+  const average = (p, r) => {
+    const n = r ? r.reduce((a, c) => a + (c || 0), 0) : 0;
+    if (n >= 3) return r.reduce((a, c, i) => a + (c || 0) * MID[i], 0) / n;
+    return p.difficulty && p.difficulty.minutes != null ? p.difficulty.minutes : 8;
+  };
   const t = { at: now, n: live.length, solves: counts.reduce((a, b) => a + b, 0),
-    minutes: live.reduce((a, p, k) => a + counts[k] * (p.difficulty && p.difficulty.minutes != null ? p.difficulty.minutes : 8), 0),
+    minutes: live.reduce((a, p, k) => a + counts[k] * average(p, ranges[k]), 0),
     papers: live.filter(p => p.kind !== "free").length };
   writeJSON(TOGETHER_KEY, t);
   showTogether(t);

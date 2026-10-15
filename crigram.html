@@ -114,6 +114,7 @@
   .feedback-card { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 18px; font-size: 14px; }
   .feedback-card span { color: var(--muted); }
   .feedback-card[hidden] { display: none; }
+  .practice-card { margin: 0 0 14px; border-color: var(--blue); }
   .btn.donate { background: #ef4035; border-color: #ef4035; color: #fff; text-decoration: none; white-space: nowrap; }
   .donate-box { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
   .donate-box p { margin: 0; flex: 1 1 220px; font-size: 14px; color: var(--muted); }
@@ -198,6 +199,10 @@
   <div class="wrap">
     <div id="notice" class="notice" hidden role="status"><span id="noticeText"></span><button id="noticeClose" aria-label="Dismiss">×</button></div>
     <div id="nextUp" class="nextup" hidden></div>
+    <div class="feedback-card practice-card" id="practiceCard" hidden>
+      <div style="flex:1 1 200px"><b>New to CRIGram?</b><br><span id="practiceText">Start with a quick practice puzzle.</span></div>
+      <button class="btn primary" id="practiceBtn">Practice</button>
+    </div>
     <div id="list" class="grid-list"></div>
     <div id="empty" class="empty" hidden>
       <p id="emptyText">No puzzles loaded yet.</p>
@@ -334,6 +339,7 @@
       <li>Stuck? The bulb gives you a hint.</li>
       <li>A new puzzle appears every Monday at 06:00 (Brussels time<span class="localTime"></span>), or occasionally on special dates. Solve the Monday puzzle within the week to keep your streak going; special puzzles are a bonus and never break your streak. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
     </ul>
+    <div class="actions" id="howPracticeRow" hidden style="margin:4px 0 10px"><button class="btn" id="howPracticeBtn">Try the practice puzzle</button></div>
     <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
     <p class="sub" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>About:</b> CRIGram was created by Jo Vandesompele (CRIG, Ghent University), with code written with the help of Claude (Opus 5.5), an AI assistant by Anthropic. Code: PolyForm Noncommercial 1.0.0. Puzzles: CC BY-NC-SA 4.0. Figures keep their own license.</p>
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
@@ -691,6 +697,7 @@ function turnedVersion(q) {
 
 let puzzles = [];        // the puzzles a player can see now, in release order
 let allPuzzles = [];     // every puzzle in the file, including scheduled ones
+let practice = null;     // the practice puzzle for newcomers: no number, no release date, not in stats or streaks
 let nextRelease = null, releaseTimer = 0;
 function applyRelease() {
   const now = Date.now();
@@ -699,7 +706,8 @@ function applyRelease() {
     .map(o => o.p);
   const isOut = p => { const t = releaseTime(p); return t === null || t <= now; };
   // the test version shows scheduled puzzles too, so they can be checked before they go live
-  puzzles = IS_TEST ? allPuzzles.slice() : allPuzzles.filter(isOut);
+  practice = allPuzzles.find(p => p.practice) || null;
+  puzzles = (IS_TEST ? allPuzzles : allPuzzles.filter(isOut)).filter(p => !p.practice);
   const future = allPuzzles.map(releaseTime).filter(t => t !== null && t > now);
   nextRelease = future.length ? Math.min(...future) : null;
   clearTimeout(releaseTimer);
@@ -842,12 +850,26 @@ function whenText(t) {
   const abs = new Date(t).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
   return { abs, rel };
 }
+const isPractice = () => !!(cur && (cur.practice || (cur.original && cur.original.practice)));
+const puzzleLabel = () => isPractice() ? "Practice puzzle" : "Puzzle " + (curIndex + 1);
+function renderPractice() {
+  const pp = practice, prog = pp && progress[pp.id];
+  const anySolved = puzzles.some(p => progress[p.id] && progress[p.id].solved);
+  $("practiceCard").hidden = !pp || !!(prog && prog.solved) || anySolved;
+  $("howPracticeRow").hidden = !pp;
+  if (!pp) return;
+  const busy = prog && prog.cells && /[12]/.test(prog.cells);
+  const mins = pp.difficulty ? Math.max(1, Math.round(pp.difficulty.minutes)) : 2;
+  $("practiceText").textContent = `Start with a quick practice puzzle (about ${mins} min).`;
+  $("practiceBtn").textContent = busy ? "Continue" : "Practice";
+}
 function renderHome() {
   const list = $("list");
   list.innerHTML = "";
   $("empty").hidden = puzzles.length > 0;
   $("emptyText").textContent = allPuzzles.length && nextRelease ? `The first puzzle arrives ${whenText(nextRelease).abs}.` : "No puzzles loaded yet.";
   $("openFileBtn").hidden = allPuzzles.length > 0;
+  renderPractice();
   const nu = $("nextUp");
   nu.hidden = !nextRelease || !puzzles.length;
   if (nextRelease) { const w = whenText(nextRelease); nu.innerHTML = `Next puzzle: <b>${w.abs}</b> · ${w.rel}`; }
@@ -1038,6 +1060,8 @@ $("resetBtn").onclick = () => {
   progress = {}; saveProgress(); stats = {}; saveStats(); renderHome(); renderStats();
 };
 $("howBtn").onclick = () => $("howBg").classList.add("show");
+$("practiceBtn").onclick = () => openPuzzle(-1);
+$("howPracticeBtn").onclick = () => { $("howBg").classList.remove("show"); if (cur) { pauseTimer(); persist(); } openPuzzle(-1); };
 document.querySelectorAll(".localTime").forEach(el => { el.textContent = localTimeSuffix(); });
 document.querySelectorAll(".sheet-bg").forEach(bg => bg.addEventListener("click", e => {
   if (e.target === bg || e.target.hasAttribute("data-close")) bg.classList.remove("show");
@@ -1060,7 +1084,8 @@ let revealImg = null;
 
 function openPuzzle(i) {
   board.style.transition = "none"; board.style.transform = "";   // never start with a grid left turned
-  const base = puzzles[i];
+  const base = i < 0 ? practice : puzzles[i];
+  if (!base) return;
   const prog = progress[base.id] || {};
   solved = !!prog.solved;
   cur = !solved && base.play ? base.play : base; curIndex = i;
@@ -1077,7 +1102,7 @@ function openPuzzle(i) {
   revealImg = null;
   if (cur.image) { revealImg = new Image(); revealImg.onload = drawBoard; revealImg.src = cur.image; }
   if (solved) for (let k = 0; k < cells.length; k++) cells[k] = cur.sol[k] ? 1 : 2;
-  $("pTitle").textContent = solved ? cur.title : "Puzzle " + (i + 1);
+  $("pTitle").textContent = solved ? cur.title : puzzleLabel();
   $("infoBtn").hidden = !solved;
   updateMeta();
   setMode(1);
@@ -1378,7 +1403,10 @@ board.addEventListener("pointerdown", e => {
   undoStack.push(cells.slice());
   if (undoStack.length > 200) undoStack.shift();
   stroke = { start: p, snap: cells.slice(), target, action, axis: null };
-  if (!elapsed && !startedAt && !cells.some(v => v)) track(`start/${cur.id}`, `Puzzle ${curIndex + 1} started`);
+  if (!elapsed && !startedAt && !cells.some(v => v)) {
+    if (isPractice()) track("practice/start", "Practice puzzle started");
+    else track(`start/${cur.id}`, `Puzzle ${curIndex + 1} started`);
+  }
   startTimer();
   applyStroke(p);
 });
@@ -1458,7 +1486,7 @@ $("restartBtn").onclick = () => {
   cells.fill(0); undoStack = []; solved = false; elapsed = 0; startedAt = 0; revealAlpha = 0;
   progress[cur.id] = { cells: Array.from(cells).join(""), time: 0, solved: false, hints: 0 };
   saveProgress();
-  $("pTitle").textContent = "Puzzle " + (curIndex + 1);
+  $("pTitle").textContent = puzzleLabel();
   $("infoBtn").hidden = true;
   updateMeta(); drawBoard();
 };
@@ -1529,6 +1557,12 @@ function recordSolve() {
     : { first: now, last: now, time, hints, best: time, solves: 1 };
   saveStats();
   if (prev) return;   // only the first solve counts in the shared statistics
+  if (isPractice()) {
+    const pm = Math.floor(time / 60);
+    track("practice/solved", "Practice puzzle solved");
+    track(`practice/solved/min/${pm < 60 ? pm : "60plus"}`, `Practice puzzle solved in ${pm < 60 ? pm : "60+"} min`);
+    return;
+  }
   const n = curIndex + 1;
   // the puzzle name is only known after solving; it goes into the titles, which only show in the private dashboard
   const name = cur.title ? ` · ${cur.title}` : "";
@@ -1690,13 +1724,13 @@ function showWin(revisit) {
       <div class="box-title">Your result</div>
       <div class="result-row">
         <span class="solved">✓ Solved in ${fmtTime(prog.time || 0)} · ${hints ? `${hints} hint${hints > 1 ? "s" : ""}` : "no hints"}</span>
-        <button class="btn slim" id="shareBtn">Share</button>
+        ${isPractice() ? "" : '<button class="btn slim" id="shareBtn">Share</button>'}
       </div>
       <div class="community-line" id="community" hidden></div>
     </section>
     ${next >= 0 ? '<button class="btn primary wide" id="winNext">Next puzzle</button>'
       : `<p class="done-note">You've solved all puzzles${nextRelease ? `. The next one arrives ${whenText(nextRelease).abs}` : ""}.</p>`}
-    ${CONFIG.donateUrl ? `<section class="box donate-box"><p>The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</p><a class="btn donate" id="winDonate" href="${escapeHtml(CONFIG.donateUrl)}" target="_blank" rel="noopener">♥ Donate</a></section>` : ""}
+    ${CONFIG.donateUrl && !isPractice() ? `<section class="box donate-box"><p>The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</p><a class="btn donate" id="winDonate" href="${escapeHtml(CONFIG.donateUrl)}" target="_blank" rel="noopener">♥ Donate</a></section>` : ""}
     <nav class="footer-links">
       <button class="link" id="winHome">All puzzles</button>
       <button class="link" id="reminderLink2">Weekly reminder</button>
@@ -1707,11 +1741,13 @@ function showWin(revisit) {
   $("winHome").onclick = leavePuzzle;
   if ($("winDonate")) $("winDonate").addEventListener("click", () => track("donate", "Donate button clicked (result page)"));
   // the share image is prepared right away, so the share menu opens instantly on tap
-  const shareInfo = { n: curIndex + 1, time: prog.time || 0, hints, p: cur, file: null };
-  shareInfo.ready = makeShareCard(shareInfo).then(file => (shareInfo.file = file));
-  $("shareBtn").onclick = () => shareResult(shareInfo);
+  if (!isPractice()) {
+    const shareInfo = { n: curIndex + 1, time: prog.time || 0, hints, p: cur, file: null };
+    shareInfo.ready = makeShareCard(shareInfo).then(file => (shareInfo.file = file));
+    $("shareBtn").onclick = () => shareResult(shareInfo);
+    showCommunity(cur, prog.time || 0, hints);
+  }
   $("reminderLink2").addEventListener("click", openReminder);
-  showCommunity(cur, prog.time || 0, hints);
   if ($("paperBtn")) $("paperBtn").addEventListener("click", () => isFree
     ? track(`link/${cur.id}`, `Puzzle ${curIndex + 1} link opened · ${cur.title}`)
     : track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened · ${cur.title}`));

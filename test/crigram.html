@@ -123,7 +123,7 @@
   .donate-box p { margin: 0; flex: 1 1 220px; font-size: 14px; color: var(--muted); }
 
   /* play */
-  .bar { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--card); border-bottom: 1px solid var(--line); }
+  .bar { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) max(12px, calc((100% - 720px) / 2 + 16px)) 8px; background: var(--card); border-bottom: 1px solid var(--line); }
   .bar .title { flex: 1; min-width: 0; }
   .bar .title b { display: block; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bar .title small { color: var(--muted); font-size: 12px; }
@@ -226,6 +226,7 @@
     <div class="together" id="together" hidden></div>
     <button class="album-line" id="albumLine" hidden></button>
     <div id="list" class="grid-list"></div>
+    <div style="text-align:center;margin-top:8px"><button class="link" id="moreLink" hidden></button></div>
     <div id="empty" class="empty" hidden>
       <p id="emptyText">No puzzles loaded yet.</p>
       <button class="btn primary" id="openFileBtn">Open puzzle file</button>
@@ -298,9 +299,12 @@
     <button class="icon" id="albumBack" aria-label="Back to puzzles">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <div class="title"><b>Your research album</b><small id="albumMeta"></small></div>
+    <div class="title"><b>Your album</b><small id="albumMeta"></small></div>
   </div>
-  <div class="wrap"><div class="album-grid" id="albumBody"></div></div>
+  <div class="wrap">
+    <div style="margin:-4px 0 10px"><button class="link" id="albumToggle" style="padding-left:0"></button></div>
+    <div class="album-grid" id="albumBody"></div>
+  </div>
 </section>
 <section id="stats" class="screen">
   <div class="bar">
@@ -895,22 +899,52 @@ function boardColor(i) {
 // ---------- home ----------
 // the browser's back button: leaving the home screen adds one step to the browser history,
 // so "back" returns to the puzzles instead of leaving the game
-let inGameStep = false, skipPop = false;
+// each step remembers its screen (and puzzle), so the browser's back and forward buttons move through
+// home → album → puzzle as expected; the game's own back buttons still go straight home
+let depth = 0, skipPop = false, restoring = false, albumAll = false;
+const puzzleId = () => (cur ? (cur.original || cur).id : null);
+function stepState(id) { return { crigram: id, pid: puzzleId(), all: albumAll, depth }; }
+function saveStep() { try { if (depth) history.replaceState(stepState(document.querySelector(".screen.active").id), ""); } catch (e) { /* ignore */ } }
 function showScreen(id) {
+  const prev = history.state && history.state.crigram ? history.state : null;
   document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
   document.body.classList.toggle("playing", id === "play");
   window.scrollTo(0, 0);
+  if (restoring) return;
   try {
-    if (id !== "home" && !inGameStep) { history.pushState({ crigram: id }, ""); inGameStep = true; }
-    else if (id === "home" && inGameStep) { inGameStep = false; skipPop = true; history.back(); }   // home through the game's own buttons
+    if (id === "home") {   // home through the game's own buttons: undo the game's steps
+      if (depth) { skipPop = true; history.go(-depth); depth = 0; }
+      return;
+    }
+    // the puzzle and its result page are one step; anything else is a new step
+    const samePuzzle = prev && depth && ["play", "result"].includes(prev.crigram) && ["play", "result"].includes(id) && prev.pid === puzzleId();
+    if (samePuzzle) history.replaceState(stepState(id), "");
+    else { history.pushState({ ...stepState(id), depth: depth + 1 }, ""); depth++; }   // only counted once it worked
   } catch (e) { /* history not available */ }
 }
-window.addEventListener("popstate", () => {
+// leaves the open puzzle (saving it) without going to the home screen
+function closePuzzle() { if (!cur) return; pauseTimer(); persist(); clearInterval(timerId); cur = null; }
+window.addEventListener("popstate", e => {
   if (skipPop) { skipPop = false; return; }
-  if (!inGameStep) return;
-  inGameStep = false;   // the browser already went back: the game only has to show the puzzles
   document.querySelectorAll(".sheet-bg.show").forEach(b => b.classList.remove("show"));
-  if (cur) leavePuzzle(); else { renderHome(); showScreen("home"); }
+  const st = e.state && e.state.crigram ? e.state : null;
+  restoring = true;
+  try {
+    if (!st) { depth = 0; closePuzzle(); if (!applyPendingUpdates()) { renderHome(); showScreen("home"); } return; }
+    depth = st.depth || 1;
+    if (st.crigram === "album" || st.crigram === "stats") {
+      closePuzzle();
+      if (st.crigram === "album") { albumAll = !!st.all; renderAlbum(); showScreen("album"); }
+      else { renderStats(); showScreen("stats"); }
+    } else if (st.pid) {
+      if (puzzleId() === st.pid) { if (st.crigram === "result" && solved) showWin(true); else { showScreen("play"); sizeBoard(); drawBoard(); } }
+      else {
+        closePuzzle();
+        const i = practice && practice.id === st.pid ? -1 : puzzles.findIndex(p => p.id === st.pid);
+        if (i >= 0 || i === -1 && practice) openPuzzle(i); else { renderHome(); showScreen("home"); }
+      }
+    }
+  } finally { restoring = false; }
 });
 function thumbCanvas(base, prog) {
   const p = prog && !prog.solved && base.play ? base.play : base;
@@ -952,6 +986,13 @@ function renderPractice() {
   $("practiceText").textContent = `Start with a quick ${pp.width} × ${pp.height} practice puzzle.`;
   $("practiceBtn").textContent = busy ? "Continue" : "Practice";
 }
+// the home screen shows at most 12 puzzles, newest first: the ones still to solve, then the solved ones;
+// all puzzles are in the album
+const HOME_MAX = 12;
+function homeSelection() {
+  const idx = puzzles.map((p, i) => i).reverse();
+  return [...idx.filter(i => !isSolvedP(puzzles[i])), ...idx.filter(i => isSolvedP(puzzles[i]))].slice(0, HOME_MAX);
+}
 function renderHome() {
   const list = $("list");
   list.innerHTML = "";
@@ -964,7 +1005,11 @@ function renderHome() {
   nu.hidden = !nextRelease || !puzzles.length;
   if (nextRelease) { const w = whenText(nextRelease); nu.innerHTML = `Next puzzle: <b>${w.abs}</b> · ${w.rel}`; }
   const now = Date.now();
-  puzzles.forEach((p, i) => {
+  const shown = homeSelection();
+  $("moreLink").hidden = shown.length >= puzzles.length;
+  $("moreLink").textContent = `All ${puzzles.length} puzzles are in your album ›`;
+  shown.forEach(i => {
+    const p = puzzles[i];
     const prog = progress[p.id];
     const b = document.createElement("button");
     b.className = "pcard";
@@ -2082,15 +2127,43 @@ function renderAlbumLine() {
   const n = puzzles.filter(isSolvedP).length, total = puzzles.length, line = $("albumLine");
   line.hidden = !n;
   if (!n) return;
-  line.innerHTML = `<span>📖 <b>Your research album</b>: ${n} of ${total} figure${total === 1 ? "" : "s"} uncovered</span>` +
+  line.innerHTML = `<span>📖 <b>Your album</b>: ${n} of ${total} figure${total === 1 ? "" : "s"} uncovered</span>` +
     `<span class="track"><i style="width:${Math.round(100 * n / total)}%"></i></span><span class="go">›</span>`;
 }
+// albumAll (declared with the history code): false shows only the uncovered figures, true every puzzle
+// a puzzle still to solve: a "?" in the colors of the app icon, on a faint puzzle grid
+let questionCache = null;
+function questionImage() {
+  const css = getComputedStyle(document.documentElement), dark = css.getPropertyValue("--clue-bg").trim();
+  if (questionCache && questionCache.bg === dark) return questionCache.url;
+  const Q = [".XXX.", "X...X", "....X", "...X.", "..X..", "..X..", ".....", "..X.."], SEQ = [0, 3, 4, 1, 6, 2, 5];
+  const cols = 11, rows = 11, g = 24, c = document.createElement("canvas");   // square, like the figures
+  c.width = cols * g + 1; c.height = rows * g + 1;
+  const x = c.getContext("2d");
+  x.fillStyle = dark; x.fillRect(0, 0, c.width, c.height);
+  x.strokeStyle = css.getPropertyValue("--line").trim(); x.lineWidth = 1;
+  x.beginPath();
+  for (let i = 0; i <= cols; i++) { x.moveTo(i * g + .5, 0); x.lineTo(i * g + .5, c.height); }
+  for (let i = 0; i <= rows; i++) { x.moveTo(0, i * g + .5); x.lineTo(c.width, i * g + .5); }
+  x.stroke();
+  let k = 0;
+  Q.forEach((row, r) => [...row].forEach((ch, col) => {
+    if (ch !== "X") return;
+    x.fillStyle = CRIG_COLORS[SEQ[k++ % 7]];
+    x.fillRect((col + 3) * g + 3, (r + 1) * g + 3, g - 5, g - 5);
+  }));
+  questionCache = { bg: dark, url: c.toDataURL("image/png") };
+  return questionCache.url;
+}
 function renderAlbum() {
-  const n = puzzles.filter(isSolvedP).length;
+  const n = puzzles.filter(isSolvedP).length, rest = puzzles.length - n;
   $("albumMeta").textContent = `${n} of ${puzzles.length} uncovered`;
+  $("albumToggle").hidden = !rest;
+  $("albumToggle").textContent = albumAll ? "Show only the uncovered figures" : `Also show the ${rest} puzzle${rest === 1 ? "" : "s"} still to solve`;
   const body = $("albumBody");
   body.innerHTML = "";
-  puzzles.forEach((p, i) => {
+  puzzles.map((p, i) => i).reverse().filter(i => albumAll || isSolvedP(puzzles[i])).forEach(i => {
+    const p = puzzles[i];
     const b = document.createElement("button");
     b.className = "album-item";
     if (isSolvedP(p)) {
@@ -2100,13 +2173,16 @@ function renderAlbum() {
       b.querySelector("b").textContent = p.layTitle || p.title;
       b.querySelector("small").textContent = `#${i + 1}` + (meta ? ` · ${meta}` : "");
     } else {
-      b.innerHTML = `<div class="ph">?</div><b>Puzzle ${i + 1}</b><small>not uncovered yet</small>`;
+      b.innerHTML = `<img alt="" src="${questionImage()}"><b>Puzzle ${i + 1}</b><small>not uncovered yet</small>`;
     }
     b.onclick = () => openPuzzle(i);
     body.appendChild(b);
   });
 }
-$("albumLine").onclick = () => { renderAlbum(); showScreen("album"); window.scrollTo(0, 0); };
+function openAlbum(all) { albumAll = all; renderAlbum(); showScreen("album"); window.scrollTo(0, 0); }
+$("albumLine").onclick = () => openAlbum(false);
+$("moreLink").onclick = () => openAlbum(true);
+$("albumToggle").onclick = () => { albumAll = !albumAll; renderAlbum(); saveStep(); };
 $("albumBack").onclick = () => { renderHome(); showScreen("home"); };
 
 // ---------- together: what all players achieved, from GoatCounter's public counts ----------

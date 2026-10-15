@@ -345,6 +345,24 @@
     <div class="actions"><button class="btn primary" data-close>Got it</button></div>
   </div>
 </div>
+<div class="sheet-bg" id="soonBg">
+  <div class="sheet">
+    <h2>This puzzle is on its way</h2>
+    <div class="sub" id="soonWhen"></div>
+    <div class="actions" style="flex-direction:column">
+      <button class="btn primary" id="soonCal">Apple Calendar (iPhone, iPad, Mac)</button>
+      <a class="btn" id="soonGoogle" target="_blank" rel="noopener">Google Calendar</a>
+      <button class="btn" id="soonFile">Other calendars (download file)</button>
+    </div>
+    <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+      <p class="sub" id="soonWait" style="margin-top:0"></p>
+      <div class="actions" style="flex-direction:column">
+        <button class="btn" id="soonPractice">Try the practice puzzle</button>
+        <button class="link" data-close style="text-align:center">See the puzzles that are already out</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="sheet-bg" id="linkBg">
   <div class="sheet">
     <h2 id="linkTitle">Puzzle</h2>
@@ -882,8 +900,7 @@ function renderPractice() {
   $("howPracticeRow").hidden = !pp;
   if (!pp) return;
   const busy = prog && prog.cells && /[12]/.test(prog.cells);
-  const mins = pp.difficulty ? Math.max(1, Math.round(pp.difficulty.minutes)) : 2;
-  $("practiceText").textContent = `Start with a quick practice puzzle (about ${mins} min).`;
+  $("practiceText").textContent = `Start with a quick ${pp.width} × ${pp.height} practice puzzle.`;
   $("practiceBtn").textContent = busy ? "Continue" : "Practice";
 }
 function renderHome() {
@@ -960,25 +977,30 @@ function openReminder() {
 
 // a one-time reminder for a linked puzzle that is not out yet, at 08:00 Brussels time on its release day
 function puzzleReminder(p, t) {
-  const at = t + 2 * 3600e3, end = at + 15 * 60e3, link = `${gameUrl()}?p=${encodeURIComponent(p.id)}`;
+  const day = brusselsDate(t).replace(/-/g, ""), link = `${gameUrl()}?p=${encodeURIComponent(p.id)}`;
   const utc = ms => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
   const text = "CRIGram puzzle is out", details = `The CRIGram puzzle you were sent is ready: cell by cell, decoding our science.\n${link}`;
   const esc = v => v.replace(/[\\;,]/g, m => "\\" + m).replace(/\n/g, "\\n");
-  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CRIG//CRIGram//EN", "BEGIN:VEVENT",
-    `UID:crigram-${p.id}@jvdesomp.github.io`, `DTSTAMP:${utc(Date.now())}`, `DTSTART:${utc(at)}`, `DTEND:${utc(end)}`,
-    `SUMMARY:${esc(text)}`, `DESCRIPTION:${esc(details)}`, `URL:${link}`,
+  const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CRIG//CRIGram//EN",
+    "BEGIN:VTIMEZONE", "TZID:Europe/Brussels",
+    "BEGIN:DAYLIGHT", "TZOFFSETFROM:+0100", "TZOFFSETTO:+0200", "TZNAME:CEST", "DTSTART:19700329T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU", "END:DAYLIGHT",
+    "BEGIN:STANDARD", "TZOFFSETFROM:+0200", "TZOFFSETTO:+0100", "TZNAME:CET", "DTSTART:19701025T030000", "RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU", "END:STANDARD",
+    "END:VTIMEZONE", "BEGIN:VEVENT",
+    `UID:crigram-${p.id}@jvdesomp.github.io`, `DTSTAMP:${utc(Date.now())}`, `DTSTART;TZID=Europe/Brussels:${day}T080000`, "DURATION:PT15M",
+    `SUMMARY:${esc(text)}`, `DESCRIPTION:${esc(details)}`,
     "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${esc(text)}`, "TRIGGER:PT0M", "END:VALARM",
     "END:VEVENT", "END:VCALENDAR"].join("\r\n");
-  $("calOne").onclick = () => {
+  // the same choices as the weekly reminder; a single event is a file for Apple too (a subscription is only for repeats)
+  $("soonCal").onclick = $("soonFile").onclick = () => {
     track("reminder/puzzle", "Puzzle reminder added");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
     a.download = "crigram-puzzle.ics";
     document.body.appendChild(a); a.click(); a.remove();
   };
-  const q = new URLSearchParams({ action: "TEMPLATE", text, dates: `${utc(at)}/${utc(end)}`, details });
-  $("calGoogle").href = "https://calendar.google.com/calendar/render?" + q.toString();
-  $("calGoogle").onclick = () => track("reminder/puzzle", "Puzzle reminder added");
+  const q = new URLSearchParams({ action: "TEMPLATE", text, dates: `${day}T080000/${day}T081500`, ctz: "Europe/Brussels", details });
+  $("soonGoogle").href = "https://calendar.google.com/calendar/render?" + q.toString();
+  $("soonGoogle").onclick = () => track("reminder/puzzle", "Puzzle reminder added");
 }
 
 // ---------- messages to returning players ----------
@@ -1086,28 +1108,31 @@ function afterLoad() {
   markVisit();
   openFromLink();
 }
+// someone who has not solved anything yet, while there is a practice puzzle to start with
+function isNewcomer() {
+  const done = q => !!(progress[q.id] && progress[q.id].solved);
+  return !!practice && !done(practice) && !puzzles.some(done);
+}
+// a link to a puzzle that is not out yet: put it in the calendar, and meanwhile practice or play the others
+function showSoon(p, t) {
+  const w = whenText(t), newcomer = isNewcomer();
+  $("soonWhen").innerHTML = `It appears on <b>${w.abs}</b> (${w.rel}). Put it in your calendar, and the reminder brings you straight to it.`;
+  $("soonWait").textContent = newcomer ? "Meanwhile, new to CRIGram? Warm up with a quick practice puzzle." : "Meanwhile, there are other puzzles to solve.";
+  $("soonPractice").hidden = !newcomer;
+  $("soonPractice").onclick = () => { $("soonBg").classList.remove("show"); openPuzzle(-1); };
+  puzzleReminder(p, t);
+  $("soonBg").classList.add("show");
+}
 // newcomers who arrive through a puzzle link may warm up with the practice puzzle first
 function openFromLink() {
   const p = LINKED && allPuzzles.find(q => q.id === LINKED);
   if (!p) return;
   if (p.practice) { openPuzzle(-1); return; }
   const i = puzzles.indexOf(p);
-  if (i < 0) {   // not out yet: say when it appears
-    const t = releaseTime(p);
-    if (t) {
-      const w = whenText(t);
-      $("noticeText").innerHTML = `This puzzle appears on <b>${w.abs}</b> (${w.rel}). See you then! ` +
-        '<button class="link" id="calOne">Add to calendar</button> · <a class="link" id="calGoogle" target="_blank" rel="noopener">Google Calendar</a>';
-      $("notice").hidden = false;
-      puzzleReminder(p, t);
-    }
-    return;
-  }
+  if (i < 0) { const t = releaseTime(p); if (t) showSoon(p, t); return; }   // not out yet
   track("linked", "Arrived through a puzzle link");
   track(`linked/${p.id}`, `Puzzle ${i + 1} opened from a link`);
-  const done = q => !!(progress[q.id] && progress[q.id].solved);
-  const newcomer = practice && !done(practice) && !puzzles.some(done);
-  if (!newcomer) { openPuzzle(i); return; }
+  if (!isNewcomer()) { openPuzzle(i); return; }
   const d = p.difficulty;
   $("linkTitle").textContent = `Puzzle ${i + 1}`;
   $("linkSub").textContent = `${p.width} × ${p.height}` + (d ? ` · ${d.label} ${stars(p)} · about ${Math.max(1, Math.round(d.minutes))} min` : "");

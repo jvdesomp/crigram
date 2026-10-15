@@ -30,7 +30,6 @@ RRULE:FREQ=WEEKLY;BYDAY=MO
 SUMMARY:New CRIGram puzzle
 DESCRIPTION:A new CRIGram puzzle is ready: cell by cell\, decoding our scie
  nce.\nhttps://jvdesomp.github.io/crigram/
-URL:https://jvdesomp.github.io/crigram/
 TRANSP:TRANSPARENT
 BEGIN:VALARM
 ACTION:DISPLAY

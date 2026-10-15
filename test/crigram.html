@@ -174,7 +174,7 @@
   .album-line .track { flex: 0 0 80px; height: 8px; border-radius: 4px; background: var(--clue-bg); overflow: hidden; }
   .album-line .track i { display: block; height: 100%; background: var(--blue); }
   .album-line .go { margin-left: auto; color: var(--muted); }
-  .together { background: var(--blue-soft); border-radius: 12px; padding: 10px 14px 12px; margin: 14px 0; }
+  .together { background: var(--blue-soft); border-radius: 12px; padding: 10px 14px 12px; margin: 0 0 14px; }
   .together[hidden] { display: none; }
   .together .head { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
   .together .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -223,9 +223,9 @@
       <div style="flex:1 1 200px"><b>New to CRIGram?</b><br><span id="practiceText">Start with a quick practice puzzle.</span></div>
       <button class="btn primary" id="practiceBtn">Practice</button>
     </div>
+    <div class="together" id="together" hidden></div>
     <button class="album-line" id="albumLine" hidden></button>
     <div id="list" class="grid-list"></div>
-    <div class="together" id="together" hidden></div>
     <div id="empty" class="empty" hidden>
       <p id="emptyText">No puzzles loaded yet.</p>
       <button class="btn primary" id="openFileBtn">Open puzzle file</button>
@@ -893,11 +893,25 @@ function boardColor(i) {
 }
 
 // ---------- home ----------
+// the browser's back button: leaving the home screen adds one step to the browser history,
+// so "back" returns to the puzzles instead of leaving the game
+let inGameStep = false, skipPop = false;
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
   document.body.classList.toggle("playing", id === "play");
   window.scrollTo(0, 0);
+  try {
+    if (id !== "home" && !inGameStep) { history.pushState({ crigram: id }, ""); inGameStep = true; }
+    else if (id === "home" && inGameStep) { inGameStep = false; skipPop = true; history.back(); }   // home through the game's own buttons
+  } catch (e) { /* history not available */ }
 }
+window.addEventListener("popstate", () => {
+  if (skipPop) { skipPop = false; return; }
+  if (!inGameStep) return;
+  inGameStep = false;   // the browser already went back: the game only has to show the puzzles
+  document.querySelectorAll(".sheet-bg.show").forEach(b => b.classList.remove("show"));
+  if (cur) leavePuzzle(); else { renderHome(); showScreen("home"); }
+});
 function thumbCanvas(base, prog) {
   const p = prog && !prog.solved && base.play ? base.play : base;
   const c = document.createElement("canvas");

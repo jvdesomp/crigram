@@ -121,6 +121,15 @@
   .btn.donate { background: #ef4035; border-color: #ef4035; color: #fff; text-decoration: none; white-space: nowrap; }
   .donate-box { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; }
   .donate-box p { margin: 0; flex: 1 1 220px; font-size: 14px; color: var(--muted); }
+  .lang-switch { display: inline-flex; align-items: center; font-size: 13px; }
+  .lang-switch button { background: none; border: 0; padding: 6px 5px; color: inherit; opacity: .7; font-weight: 600; letter-spacing: .5px; }
+  .lang-switch button[aria-pressed="true"] { opacity: 1; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+  .lang-switch span { opacity: .5; }
+  /* in line with the right edge of the puzzle cards (the 720 px column), not the edge of a wide window */
+  .hero-lang { position: absolute; top: calc(6px + env(safe-area-inset-top)); right: max(11px, calc((100% - 720px) / 2 + 11px)); color: #fff; }
+  .sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .sheet-head .lang-switch { color: var(--muted); flex: none; }
+  .sheet-head .lang-switch button[aria-pressed="true"] { color: var(--ink); }
 
   /* play */
   .bar { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) max(12px, calc((100% - 720px) / 2 + 16px)) 8px; background: var(--card); border-bottom: 1px solid var(--line); }
@@ -214,13 +223,14 @@
 <section id="home" class="screen active">
   <div class="hero">
     <h1>CRIG<span>ram</span></h1>
-    <p>cell by cell, decoding our science</p>
+    <p data-t="1">cell by cell, decoding our science</p>
+    <div class="lang-switch hero-lang" role="group" aria-label="Language"></div>
   </div>
   <div class="wrap">
-    <div id="notice" class="notice" hidden role="status"><span id="noticeText"></span><button id="noticeClose" aria-label="Dismiss">×</button></div>
+    <div id="notice" class="notice" hidden role="status"><span id="noticeText"></span><button id="noticeClose" aria-label="Dismiss" data-ta="20">×</button></div>
     <div id="nextUp" class="nextup" hidden></div>
     <div class="feedback-card practice-card" id="practiceCard" hidden>
-      <div style="flex:1 1 200px"><b>New to CRIGram?</b><br><span id="practiceText">Start with a quick practice puzzle.</span></div>
+      <div style="flex:1 1 200px"><b data-t="145">New to CRIGram?</b><br><span id="practiceText">Start with a quick practice puzzle.</span></div>
       <button class="btn primary" id="practiceBtn">Practice</button>
     </div>
     <div class="together" id="together" hidden></div>
@@ -232,18 +242,18 @@
       <button class="btn primary" id="openFileBtn">Open puzzle file</button>
     </div>
     <div class="feedback-card" id="feedbackCard" hidden>
-      <div><b>Enjoying CRIGram?</b><br><span>Tell us what you think, or sign up for news from CRIG.</span></div>
-      <a class="btn primary" id="feedbackLink" href="#" target="_blank" rel="noopener">Feedback &amp; CRIG news</a>
+      <div><b data-t="21">Enjoying CRIGram?</b><br><span data-t="22">Tell us what you think, or sign up for news from CRIG.</span></div>
+      <a class="btn primary" id="feedbackLink" href="#" target="_blank" rel="noopener" data-t="23">Feedback &amp; CRIG news</a>
     </div>
     <div class="feedback-card" id="donateCard" hidden>
-      <div style="flex:1 1 220px"><span>The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</span></div>
-      <a class="btn donate" id="donateLink" href="#" target="_blank" rel="noopener">♥ Donate</a>
+      <div style="flex:1 1 220px"><span data-t="24">The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</span></div>
+      <a class="btn donate" id="donateLink" href="#" target="_blank" rel="noopener" data-t="25">♥ Donate</a>
     </div>
     <div class="links">
-      <button class="link" id="statsBtn">Your stats</button>
-      <button class="link" id="howBtn">How to play</button>
-      <button class="link" id="reminderLink">Weekly reminder</button>
-      <button class="link" id="installBtn" hidden>Install app</button>
+      <button class="link" id="statsBtn" data-t="26">Your stats</button>
+      <button class="link" id="howBtn" data-t="27">How to play</button>
+      <button class="link" id="reminderLink" data-t="28">Weekly reminder</button>
+      <button class="link" id="installBtn" hidden data-t="29">Install app</button>
       <!-- only for opening the game as a local file on a computer, when testing -->
       <button class="link" id="loadBtn" hidden>Load puzzle file</button>
     </div>
@@ -253,33 +263,33 @@
 
 <section id="play" class="screen">
   <div class="bar">
-    <button class="icon" id="backBtn" aria-label="Back to puzzles">
+    <button class="icon" id="backBtn" aria-label="Back to puzzles" data-ta="42">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
     <div class="title"><b id="pTitle">Puzzle</b><small id="pMeta"></small></div>
-    <button class="icon" id="infoBtn" aria-label="About this figure" hidden>
+    <button class="icon" id="infoBtn" aria-label="About this figure" data-ta="43" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>
     </button>
-    <button class="icon" id="undoBtn" aria-label="Undo">
+    <button class="icon" id="undoBtn" aria-label="Undo" data-ta="44">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg>
     </button>
-    <button class="icon" id="hintBtn" aria-label="Hint">
+    <button class="icon" id="hintBtn" aria-label="Hint" data-ta="45">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V16h8v-1.3A7 7 0 0012 2z"/></svg>
     </button>
-    <button class="icon" id="restartBtn" aria-label="Restart">
+    <button class="icon" id="restartBtn" aria-label="Restart" data-ta="46">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.8L3 8"/><path d="M3 3v5h5"/></svg>
     </button>
   </div>
   <div id="boardWrap"><canvas id="board"></canvas></div>
   <div class="tools">
-    <button class="icon zoom" id="zoomOut" aria-label="Zoom out">
+    <button class="icon zoom" id="zoomOut" aria-label="Zoom out" data-ta="47">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
     </button>
-    <div class="mode" role="group" aria-label="Tool">
-      <button id="modeFill" class="on"><span class="swatch"></span>Fill</button>
-      <button id="modeCross"><span class="xmark"></span>Blank</button>
+    <div class="mode" role="group" aria-label="Tool" data-ta="49">
+      <button id="modeFill" class="on"><span class="swatch"></span><span data-t="35">Fill</span></button>
+      <button id="modeCross"><span class="xmark"></span><span data-t="36">Blank</span></button>
     </div>
-    <button class="icon zoom" id="zoomIn" aria-label="Zoom in">
+    <button class="icon zoom" id="zoomIn" aria-label="Zoom in" data-ta="48">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M12 5v14"/></svg>
     </button>
   </div>
@@ -287,7 +297,7 @@
 
 <section id="result" class="screen">
   <div class="bar">
-    <button class="icon" id="resultBack" aria-label="Back to puzzles">
+    <button class="icon" id="resultBack" aria-label="Back to puzzles" data-ta="42">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
     <div class="title"><b id="rTitle">Solved!</b><small id="rMeta"></small></div>
@@ -296,10 +306,10 @@
 </section>
 <section id="album" class="screen">
   <div class="bar">
-    <button class="icon" id="albumBack" aria-label="Back to puzzles">
+    <button class="icon" id="albumBack" aria-label="Back to puzzles" data-ta="42">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <div class="title"><b>Your album</b><small id="albumMeta"></small></div>
+    <div class="title"><b data-t="176">Your album</b><small id="albumMeta"></small></div>
   </div>
   <div class="wrap">
     <div style="margin:-4px 0 10px"><button class="link" id="albumToggle" style="padding-left:0"></button></div>
@@ -308,93 +318,93 @@
 </section>
 <section id="stats" class="screen">
   <div class="bar">
-    <button class="icon" id="statsBack" aria-label="Back to puzzles">
+    <button class="icon" id="statsBack" aria-label="Back to puzzles" data-ta="42">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <div class="title"><b>Your stats</b><small>stored on this device only</small></div>
+    <div class="title"><b data-t="102">Your stats</b><small data-t="103">stored on this device only</small></div>
   </div>
   <div class="wrap" id="statsBody"></div>
   <div class="wrap" id="resetRow" style="padding-top:0;text-align:center" hidden><button class="link" id="resetBtn" style="color:var(--muted)">Reset progress and stats</button></div>
 </section>
 <div class="sheet-bg" id="installBg">
   <div class="sheet">
-    <h2>Install CRIGram</h2>
-    <div class="sub">Put CRIGram on your home screen. It opens full screen and also works offline.</div>
-    <p><b>iPhone or iPad (Safari):</b> tap the Share button <span aria-hidden="true">⎋</span> at the bottom of the screen, then <b>Add to Home Screen</b>.</p>
-    <p><b>Android (Chrome):</b> tap the menu <b>⋮</b> at the top right, then <b>Install app</b> or <b>Add to Home screen</b>.</p>
-    <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+    <h2 data-t="116">Install CRIGram</h2>
+    <div class="sub" data-t="117">Put CRIGram on your home screen. It opens full screen and also works offline.</div>
+    <p data-t="118"><b>iPhone or iPad (Safari):</b> tap the Share button <span aria-hidden="true">⎋</span> at the bottom of the screen, then <b>Add to Home Screen</b>.</p>
+    <p data-t="119"><b>Android (Chrome):</b> tap the menu <b>⋮</b> at the top right, then <b>Install app</b> or <b>Add to Home screen</b>.</p>
+    <div class="actions"><button class="btn primary" data-close data-t="120">Got it</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="shareBg">
   <div class="sheet">
-    <h2>Share your result</h2>
-    <img class="share-preview" id="sharePreview" alt="Your CRIGram result card">
+    <h2 data-t="93">Share your result</h2>
+    <img class="share-preview" id="sharePreview" alt="Your CRIGram result card" data-ta="101">
     <div class="sub" id="shareText"></div>
     <div class="actions" id="shareNative">
-      <button class="btn primary" id="shareLink">Share link…</button>
-      <button class="btn" id="shareImage">Share image…</button>
+      <button class="btn primary" id="shareLink" data-t="94">Share link…</button>
+      <button class="btn" id="shareImage" data-t="95">Share image…</button>
     </div>
     <div class="actions" style="margin-top:8px">
-      <button class="btn" id="shareCopy">Copy text</button>
-      <a class="btn" id="shareDownload" download="crigram-result.png">Download image</a>
+      <button class="btn" id="shareCopy" data-t="96">Copy text</button>
+      <a class="btn" id="shareDownload" download="crigram-result.png" data-t="97">Download image</a>
     </div>
-    <div class="actions" style="margin-top:8px"><button class="btn" data-close>Close</button></div>
+    <div class="actions" style="margin-top:8px"><button class="btn" data-close data-t="98">Close</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="reminderBg">
   <div class="sheet">
-    <h2>Weekly reminder</h2>
-    <div class="sub">Get a reminder in your calendar every Monday at 08:00, when the new puzzle is ready. You can change the time in your calendar afterwards.</div>
+    <h2 data-t="121">Weekly reminder</h2>
+    <div class="sub" data-t="122">Get a reminder in your calendar every Monday at 08:00, when the new puzzle is ready. You can change the time in your calendar afterwards.</div>
     <div class="actions" style="flex-direction:column">
-      <a class="btn primary" id="remApple">Apple Calendar (iPhone, iPad, Mac)</a>
-      <a class="btn" id="remGoogle" target="_blank" rel="noopener">Google Calendar</a>
-      <a class="btn" id="remFile" href="crigram-weekly.ics" download="crigram-weekly.ics">Other calendars (download file)</a>
+      <a class="btn primary" id="remApple" data-t="123">Apple Calendar (iPhone, iPad, Mac)</a>
+      <a class="btn" id="remGoogle" target="_blank" rel="noopener" data-t="124">Google Calendar</a>
+      <a class="btn" id="remFile" href="crigram-weekly.ics" download="crigram-weekly.ics" data-t="125">Other calendars (download file)</a>
     </div>
-    <p class="sub" style="margin-top:12px">On a Mac, Calendar asks how to subscribe: untick <b>Remove alerts</b> if you want a notification.</p>
-    <div class="actions" style="margin-top:4px"><button class="btn" data-close>Close</button></div>
+    <p class="sub" style="margin-top:12px" data-t="126">On a Mac, Calendar asks how to subscribe: untick <b>Remove alerts</b> if you want a notification.</p>
+    <div class="actions" style="margin-top:4px"><button class="btn" data-close data-t="98">Close</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="howBg">
   <div class="sheet">
-    <h2>How to play</h2>
-    <div class="sub">Each puzzle hides part of a figure from a CRIG paper.</div>
+    <div class="sheet-head"><h2 data-t="129">How to play</h2><div class="lang-switch" role="group" aria-label="Language"></div></div>
+    <div class="sub" data-t="130">Each puzzle hides part of a figure from a CRIG paper.</div>
     <ul class="rules">
-      <li>Each number is a <b>run</b>: a group of filled cells right next to each other. The numbers next to a row give its runs from left to right; the numbers above a column give its runs from top to bottom.
-        <div class="example" aria-label="Example: a row with clue 1 4 1">
+      <li><span data-t="131">Each number is a <b>run</b>: a group of filled cells right next to each other. The numbers next to a row give its runs from left to right; the numbers above a column give its runs from top to bottom.</span>
+        <div class="example" aria-label="Example: a row with clue 1 4 1" data-ta="190">
           <span class="ex-clue">1&nbsp;4&nbsp;1</span>
           <span class="ex-row"><i class="f"></i><i></i><i class="f"></i><i class="f"></i><i class="f thick"></i><i class="f"></i><i></i><i></i><i class="f"></i><i></i></span>
         </div>
-        <span class="ex-note">For example, <b>1 4 1</b> means: a run of 1, then a run of 4, then a run of 1. Here the run of 4 even crosses a thick line.</span></li>
-      <li>Between two runs there is at least one empty cell; how many, and where the runs start, is up to you to work out. A <b>0</b> means the whole line is empty.</li>
-      <li>The thick lines every 5 cells only help you count. They have nothing to do with the numbers.</li>
-      <li>Use <b>Fill</b> to color cells and <b>Blank</b> to turn cells white when you know they stay empty. Gray cells are still undecided.</li>
-      <li>Drag along a row or column to mark several cells at once. Tap a marked cell again to clear it.</li>
-      <li>Every puzzle can be solved by logic alone. No guessing needed!</li>
-      <li>Cells too small? Use <b>+</b> and <b>−</b> to zoom. Drag along the clue numbers (or with two fingers) to move around; the mini-map in the corner shows where you are.</li>
-      <li>Stuck? The bulb gives you a hint.</li>
-      <li>Stars show how hard a puzzle is: ★☆☆☆ <b>easy</b> (a typical player needs less than 5 minutes), ★★☆☆ <b>medium</b> (5 to 10 minutes), ★★★☆ <b>hard</b> (10 to 20 minutes) and ★★★★ <b>expert</b> (more than 20 minutes). There is no clock while you play: take your time. You see your time once you have solved the puzzle.</li>
-      <li>A new puzzle appears every Monday at 06:00 (Brussels time<span class="localTime"></span>), or occasionally on special dates. Solve the Monday puzzle within the week to keep your streak going; special puzzles are a bonus and never break your streak. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
+        <span class="ex-note" data-t="132">For example, <b>1 4 1</b> means: a run of 1, then a run of 4, then a run of 1. Here the run of 4 even crosses a thick line.</span></li>
+      <li data-t="133">Between two runs there is at least one empty cell; how many, and where the runs start, is up to you to work out. A <b>0</b> means the whole line is empty.</li>
+      <li data-t="134">The thick lines every 5 cells only help you count. They have nothing to do with the numbers.</li>
+      <li data-t="135">Use <b>Fill</b> to color cells and <b>Blank</b> to turn cells white when you know they stay empty. Gray cells are still undecided.</li>
+      <li data-t="136">Drag along a row or column to mark several cells at once. Tap a marked cell again to clear it.</li>
+      <li data-t="137">Every puzzle can be solved by logic alone. No guessing needed!</li>
+      <li data-t="138">Cells too small? Use <b>+</b> and <b>−</b> to zoom. Drag along the clue numbers (or with two fingers) to move around; the mini-map in the corner shows where you are.</li>
+      <li data-t="139">Stuck? The bulb gives you a hint.</li>
+      <li data-t="169">Stars show how hard a puzzle is: ★☆☆☆ <b>easy</b> (a typical player needs less than 5 minutes), ★★☆☆ <b>medium</b> (5 to 10 minutes), ★★★☆ <b>hard</b> (10 to 20 minutes) and ★★★★ <b>expert</b> (more than 20 minutes). There is no clock while you play: take your time. You see your time once you have solved the puzzle.</li>
+      <li data-t="140">A new puzzle appears every Monday at 06:00 (Brussels time<span class="localTime"></span>), or occasionally on special dates. Solve the Monday puzzle within the week to keep your streak going; special puzzles are a bonus and never break your streak. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
     </ul>
-    <div class="actions" id="howPracticeRow" hidden style="margin:4px 0 10px"><button class="btn" id="howPracticeBtn">Try the practice puzzle</button></div>
-    <p class="sub" id="privacyNote" hidden>CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
-    <p class="sub" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px"><b>About:</b> CRIGram was created by Jo Vandesompele (CRIG, Ghent University), with code written with the help of Claude (Opus 5.5), an AI assistant by Anthropic. Code: PolyForm Noncommercial 1.0.0. Puzzles: CC BY-NC-SA 4.0. Figures keep their own license.</p>
-    <div class="actions"><button class="btn primary" data-close>Got it</button></div>
+    <div class="actions" id="howPracticeRow" hidden style="margin:4px 0 10px"><button class="btn" id="howPracticeBtn" data-t="150">Try the practice puzzle</button></div>
+    <p class="sub" id="privacyNote" hidden data-t="141">CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
+    <p class="sub" style="border-top:1px solid var(--line);padding-top:10px;margin-top:10px" data-t="142"><b>About:</b> CRIGram was created by Jo Vandesompele (CRIG, Ghent University), with code written with the help of Claude (Opus 5.5), an AI assistant by Anthropic. Code: PolyForm Noncommercial 1.0.0. Puzzles: CC BY-NC-SA 4.0. Figures keep their own license.</p>
+    <div class="actions"><button class="btn primary" data-close data-t="143">Got it</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="soonBg">
   <div class="sheet">
-    <h2>This puzzle is on its way</h2>
+    <h2 data-t="158">This puzzle is on its way</h2>
     <div class="sub" id="soonWhen"></div>
     <div class="actions" style="flex-direction:column">
-      <button class="btn primary" id="soonCal">Apple Calendar (iPhone, iPad, Mac)</button>
-      <a class="btn" id="soonGoogle" target="_blank" rel="noopener">Google Calendar</a>
-      <button class="btn" id="soonFile">Other calendars (download file)</button>
+      <button class="btn primary" id="soonCal" data-t="123">Apple Calendar (iPhone, iPad, Mac)</button>
+      <a class="btn" id="soonGoogle" target="_blank" rel="noopener" data-t="124">Google Calendar</a>
+      <button class="btn" id="soonFile" data-t="125">Other calendars (download file)</button>
     </div>
     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
       <p class="sub" id="soonWait" style="margin-top:0"></p>
       <div class="actions" style="flex-direction:column">
-        <button class="btn" id="soonPractice">Try the practice puzzle</button>
-        <button class="link" data-close style="text-align:center">See the puzzles that are already out</button>
+        <button class="btn" id="soonPractice" data-t="164">Try the practice puzzle</button>
+        <button class="link" data-close style="text-align:center" data-t="165">See the puzzles that are already out</button>
       </div>
     </div>
   </div>
@@ -403,9 +413,9 @@
   <div class="sheet">
     <h2 id="linkTitle">Puzzle</h2>
     <div class="sub" id="linkSub"></div>
-    <p>New to CRIGram? Warm up first with a quick practice puzzle: it shows you how it works.</p>
+    <p data-t="174">New to CRIGram? Warm up first with a quick practice puzzle: it shows you how it works.</p>
     <div class="actions" style="flex-direction:column">
-      <button class="btn primary" id="linkPractice">Practice first</button>
+      <button class="btn primary" id="linkPractice" data-t="153">Practice first</button>
       <button class="btn" id="linkGo">Go to the puzzle</button>
     </div>
   </div>
@@ -646,13 +656,13 @@ function releaseISO(dateStr) {
 }
 // the release time in the player's own time zone, when that differs from Brussels, e.g. "Sunday 23:00 where you are"
 function localTimeNote(tz) {
-  const t = releaseMoment(nextMonday());
-  const f = (zone, o) => new Date(t).toLocaleString("en-GB", { ...o, timeZone: zone });
+  const ts = releaseMoment(nextMonday());
+  const f = (zone, o) => new Date(ts).toLocaleString(locale, { ...o, timeZone: zone });
   const hm = { hour: "2-digit", minute: "2-digit" };
   const local = f(tz, hm), brussels = f(RELEASE_TZ, hm);
   if (local === brussels) return "";
   const day = f(tz, { weekday: "long" }), bxlDay = f(RELEASE_TZ, { weekday: "long" });
-  return (day !== bxlDay ? day + " " : "") + local + " where you are";
+  return day !== bxlDay ? t(115, "{day} {time} where you are", { day, time: local }) : t(114, "{time} where you are", { time: local });
 }
 const localTimeSuffix = tz => { const n = localTimeNote(tz); return n ? "; " + n : ""; };
 function brusselsDate(ts) { const p = tzParts(ts, RELEASE_TZ); return `${p.year}-${p.month}-${p.day}`; }
@@ -682,6 +692,260 @@ const CONFIG = {
   // donateUrl: the UGent donation form for CRIG, empty = no donate button
   donateUrl: "https://actieplatform.ugent.be/en-GB/p/donatieformulier-87a9eb5ec/step-1",
 };
+
+// ---------- languages ----------
+// English lives in the code itself: t(n, "English text", { vars }) looks up text n (its number in
+// translations/crigram-texts-en-nl_vN.xlsx) in the player's language, and falls back to the English.
+// A new language needs a column in the translation file, a run of translations/build-texts.py and an entry in LOCALES.
+// The game takes the first language the browser (on a phone: the phone) prefers, until the player picks one
+// with the EN · NL switch; a link can ask for one with ?lang=nl. Puzzles, progress and statistics are the same
+// in every language.
+const LOCALES = { en: "en-GB", nl: "nl-BE" };
+const LANGS = Object.keys(LOCALES), LANG_KEY = "crigram.lang";
+let lang = (() => {
+  try {
+    const u = new URL(location.href), asked = (u.searchParams.get("lang") || "").toLowerCase();
+    if (u.searchParams.has("lang")) { u.searchParams.delete("lang"); history.replaceState(null, "", u.pathname + u.search + u.hash); }
+    if (LANGS.includes(asked)) { localStorage.setItem(LANG_KEY, asked); return asked; }
+  } catch (e) { /* ignore */ }
+  try { const saved = localStorage.getItem(LANG_KEY); if (LANGS.includes(saved)) return saved; } catch (e) { /* ignore */ }
+  for (const l of navigator.languages || [navigator.language || ""]) {
+    const base = String(l).slice(0, 2).toLowerCase();
+    if (LANGS.includes(base)) return base;
+  }
+  return "en";
+})();
+let locale = LOCALES[lang];
+const TEXTS = {
+// <texts> made by translations/build-texts.py from the translation file: run it again instead of editing here
+nl: {
+  1: "stukje voor stukje onze wetenschap bijeenpuzzelen",
+  2: "Nog geen puzzels ingeladen.",
+  3: "De eerste puzzel komt eraan op {date}.",
+  4: "Volgende puzzel: <b>{date}</b> · {when}",
+  5: "binnen {n} min",
+  6: "binnen 1 uur",
+  7: "binnen {n} uur",
+  8: "binnen 1 dag",
+  9: "binnen {n} dagen",
+  10: "Puzzel {n}",
+  11: "gepland op {date}",
+  12: "nieuw deze week",
+  13: "bezig",
+  14: "speciaal",
+  15: "Welkom bij CRIGram! Elke puzzel verbergt een figuur uit een CRIG-artikel. Ben je nieuw? <button class=\"link\" data-how>Lees hoe het spel werkt</button>.",
+  16: "We hebben je gemist! <b>{n} puzzels</b> wachten op jou.",
+  17: "Nieuw sedert je laatste bezoek: <b>puzzel {n}</b>.",
+  18: "<b>{n} nieuwe puzzels</b> sedert je laatste bezoek.",
+  19: "Je <b>streak van {n} weken</b> staat op het spel: de puzzel van deze week staat open tot maandag 06:00.",
+  20: "Sluiten",
+  21: "Vind je CRIGram leuk?",
+  22: "Laat ons weten wat je ervan vindt, of schrijf je in voor CRIG-nieuws.",
+  23: "Feedback & CRIG-nieuws",
+  24: "De puzzel is gratis, maar kankeronderzoek is duur. Speel je graag CRIGram? Overweeg dan om ons onderzoek te steunen.",
+  25: "♥ Doneer",
+  26: "Jouw statistieken",
+  27: "Hoe speel je?",
+  28: "Wekelijkse herinnering",
+  29: "Installeer de app",
+  31: "makkelijk",
+  32: "gemiddeld",
+  33: "moeilijk",
+  34: "expert",
+  35: "Kleur",
+  36: "Leeg",
+  37: "Deze puzzel opnieuw beginnen?",
+  38: "Dit vakje was fout. Het is gewist.",
+  39: "Dit vakje was fout ({n} fouten in totaal). Het is gewist.",
+  40: "Kijk naar deze rij.",
+  41: "Kijk naar deze kolom.",
+  42: "Terug naar de puzzels",
+  43: "Over deze figuur",
+  44: "Ongedaan maken",
+  45: "Hint",
+  46: "Opnieuw beginnen",
+  47: "Uitzoomen",
+  48: "Inzoomen",
+  49: "Gereedschap",
+  50: "Opgelost!",
+  51: "Jouw CRIGram",
+  52: "De originele figuur",
+  53: "De originele afbeelding",
+  54: "Puzzel: {title}",
+  55: "Het onderzoek",
+  56: "licentie figuur {license}",
+  57: "licentie afbeelding {license}",
+  58: "licentie puzzel {license}",
+  59: "Lees het artikel ↗",
+  60: "Lees meer ↗",
+  61: "Jouw resultaat",
+  62: "✓ Opgelost in {time} · zonder hints",
+  63: "✓ Opgelost in {time} · 1 hint",
+  64: "✓ Opgelost in {time} · {n} hints",
+  65: "Deel",
+  66: "Volgende puzzel",
+  67: "Je hebt alle puzzels opgelost.",
+  68: "Je hebt alle puzzels opgelost. De volgende komt eraan op {date}.",
+  69: "Alle puzzels",
+  70: "Bekijk het rooster",
+  71: "De opgeloste CRIGram",
+  72: "Het detail van de originele figuur",
+  73: "Al door 1 speler opgelost: je bent een van de eersten!",
+  74: "Al door {n} spelers opgelost: je bent een van de eersten!",
+  75: "Je bent een van de allereerste spelers die deze puzzel oplost!",
+  76: "Opgelost door <b>{n}</b> spelers.",
+  77: "De meesten hadden <b>{range}</b> nodig; jij: {mine}.",
+  78: "De meesten hadden <b>{range}</b> nodig.",
+  79: "<b>{p} %</b> loste hem op zonder hints.",
+  80: "(alle spelers, om de paar uur bijgewerkt)",
+  90: "#{n} gekraakt",
+  92: "Lukt het jou ook?",
+  93: "Deel je resultaat",
+  94: "Deel link…",
+  95: "Deel afbeelding…",
+  96: "Kopieer tekst",
+  97: "Download afbeelding",
+  98: "Sluiten",
+  99: "Gekopieerd! Plak het in een bericht of post.",
+  100: "Kopieer deze tekst:",
+  101: "Jouw CRIGram-resultaatkaart",
+  102: "Jouw statistieken",
+  103: "enkel bewaard op dit toestel",
+  104: "opgelost",
+  105: "zonder hints",
+  106: "mediane tijd",
+  107: "snelste",
+  108: "week op rij",
+  109: "weken op rij",
+  110: "langste weken op rij",
+  111: "Puzzels",
+  112: "nog niet opgelost",
+  113: "Tijden en hints komen van je eerste oplossing. Elke maandag om 06:00 (Brusselse tijd{local}) verschijnt een nieuwe puzzel, soms ook op speciale dagen. Je reeks telt de opeenvolgende weken waarin je de maandagpuzzel oploste voor de volgende verscheen. Speciale puzzels en de puzzels van de lanceerweek tellen niet mee.",
+  114: "{time} bij jou",
+  115: "{day} {time} bij jou",
+  116: "Installeer CRIGram",
+  117: "Zet CRIGram op je beginscherm. Het opent dan schermvullend en werkt ook offline.",
+  118: "<b>iPhone of iPad (Safari):</b> tik onderaan op de deelknop ⎋ en kies dan <b>Zet op beginscherm</b>.",
+  119: "<b>Android (Chrome):</b> tik rechtsboven op het menu <b>⋮</b> en kies dan <b>App installeren</b> of <b>Toevoegen aan startscherm</b>.",
+  120: "Begrepen",
+  121: "Wekelijkse herinnering",
+  122: "Krijg elke maandag om 08:00 een herinnering in je agenda, wanneer de nieuwe puzzel klaarstaat. Je kunt het tijdstip achteraf in je agenda aanpassen.",
+  123: "Apple Agenda (iPhone, iPad, Mac)",
+  124: "Google Agenda",
+  125: "Andere agenda's (bestand downloaden)",
+  126: "Op een Mac vraagt Agenda hoe je wilt abonneren: vink <b>Verwijder meldingen</b> uit als je een melding wilt.",
+  127: "Nieuwe CRIGram-puzzel",
+  128: "Een nieuwe CRIGram-puzzel staat klaar: stukje voor stukje onze wetenschap bijeenpuzzelen.",
+  129: "Hoe speel je?",
+  130: "Elke puzzel verbergt een deel van een figuur uit een CRIG-artikel.",
+  131: "Elk getal is een <b>blok</b>: een groep ingekleurde vakjes naast elkaar. De getallen naast een rij geven de blokken van links naar rechts; de getallen boven een kolom geven de blokken van boven naar onder.",
+  132: "Zo betekent <b>1 4 1</b>: een blok van 1, dan een blok van 4, dan een blok van 1. Hier loopt het blok van 4 zelfs over een dikke lijn.",
+  133: "Tussen twee blokken zit minstens één leeg vakje; hoeveel, en waar de blokken beginnen, zoek je zelf uit. Een <b>0</b> betekent dat de hele lijn leeg is.",
+  134: "De dikke lijnen om de 5 vakjes helpen je alleen tellen. Ze hebben niets met de getallen te maken.",
+  135: "Gebruik <b>Kleur</b> om vakjes in te kleuren en <b>Leeg</b> om vakjes wit te maken als je weet dat ze leeg blijven. Grijze vakjes zijn nog niet beslist.",
+  136: "Sleep langs een rij of kolom om meerdere vakjes tegelijk te markeren. Tik nog eens op een gemarkeerd vakje om het te wissen.",
+  137: "Elke puzzel is op te lossen met logica alleen. Gokken is nooit nodig!",
+  138: "Vakjes te klein? Zoom met <b>+</b> en <b>−</b>. Sleep langs de getallen (of met twee vingers) om te verschuiven; het minikaartje in de hoek toont waar je bent.",
+  139: "Zit je vast? Het lampje geeft je een hint.",
+  140: "Elke maandag om 06:00 (Brusselse tijd{local}) verschijnt een nieuwe puzzel, soms ook op speciale dagen. Los de maandagpuzzel binnen de week op om je reeks te behouden; speciale puzzels zijn een bonus en breken je reeks nooit. Tik op <b>Wekelijkse herinnering</b> om elke maandag een herinnering in je agenda te krijgen.",
+  141: "CRIGram telt anoniem hoe vaak er gespeeld wordt, om te zien welke puzzels populair zijn. Geen cookies, geen persoonsgegevens.",
+  142: "<b>Over:</b> CRIGram werd gemaakt door Jo Vandesompele (CRIG, Universiteit Gent), met code geschreven met de hulp van Claude (Opus 5.5), een AI-assistent van Anthropic. Code: PolyForm Noncommercial 1.0.0. Puzzels: CC BY-NC-SA 4.0. Figuren behouden hun eigen licentie.",
+  143: "Begrepen",
+  145: "Nieuw bij CRIGram?",
+  147: "Oefenen",
+  148: "Verder",
+  149: "Oefenpuzzel",
+  150: "Probeer de oefenpuzzel",
+  153: "Eerst oefenen",
+  154: "Naar puzzel {n}",
+  156: "Je CRIGram-puzzel staat klaar",
+  157: "De CRIGram-puzzel die je kreeg, staat klaar: stukje voor stukje onze wetenschap bijeenpuzzelen.",
+  158: "Deze puzzel is onderweg",
+  159: "Hij verschijnt op <b>{date}</b> ({when}). Zet hem in je agenda: de herinnering brengt je er meteen naartoe.",
+  162: "Intussen, nieuw bij CRIGram? Warm op met een korte oefenpuzzel.",
+  163: "Intussen zijn er nog andere puzzels om op te lossen.",
+  164: "Probeer de oefenpuzzel",
+  165: "Bekijk de puzzels die al uit zijn",
+  166: "Begin met een korte oefenpuzzel van {width} × {height}.",
+  167: "🎉 {n}e puzzel",
+  168: "🎉 Onze {n}e puzzel",
+  169: "Sterren tonen hoe <b>moeilijk</b> een puzzel is: ★☆☆☆ <b>makkelijk</b> (een doorsnee speler heeft minder dan 5 minuten nodig), ★★☆☆ <b>gemiddeld</b> (5 tot 10 minuten), ★★★☆ moeilijk (10 tot 20 minuten) en ★★★★ <b>expert</b> (meer dan 20 minuten). Er loopt geen klok tijdens het spelen: neem je tijd. Je ziet je tijd zodra je de puzzel opgelost hebt.",
+  170: "Ik kraakte CRIGram #{n} 🧬 ({time}, zonder hints) Lukt het jou ook? {link}",
+  171: "Ik kraakte CRIGram #{n} 🧬 ({time}, 1 hint) Lukt het jou ook? {link}",
+  172: "Ik kraakte CRIGram #{n} 🧬 ({time}, {hints} hints) Lukt het jou ook? {link}",
+  174: "Nieuw bij CRIGram? Warm eerst op met een korte oefenpuzzel: zo zie je hoe het werkt.",
+  175: "📖 <b>Jouw album</b>: {n} van {total} figuren ontdekt",
+  176: "Jouw album",
+  177: "{n} van {total} ontdekt",
+  178: "nog niet ontdekt",
+  179: "Alle spelers tot nu toe",
+  180: "puzzels opgelost",
+  181: "uren gepuzzeld",
+  182: "kankeronderzoeksartikels in de kijker",
+  184: "Alle {n} puzzels staan in je album ›",
+  185: "Toon ook de {n} puzzels die je nog moet oplossen",
+  186: "Toon alleen de ontdekte figuren",
+  187: "minuten gepuzzeld",
+  188: "kankeronderzoeksartikel in de kijker",
+  189: "Toon ook de puzzel die je nog moet oplossen",
+  190: "Voorbeeld: een rij met de getallen 1 4 1",
+  191: "zonder hints",
+  192: "1 hint",
+  193: "{n} hints",
+},
+// </texts>
+};
+function t(n, en, vars) {
+  const s = (TEXTS[lang] && TEXTS[lang][n]) || en;
+  return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m)) : s;
+}
+// a puzzle's own texts (title, layTitle, laySummary) in the player's language, when the maker added them
+function ptext(p, field) {
+  const tr = p.translations && p.translations[lang];
+  return (tr && tr[field]) || p[field] || "";
+}
+const levelName = d => ({ easy: t(31, "easy"), medium: t(32, "medium"), hard: t(33, "hard"), expert: t(34, "expert") })[d.label] || d.label;
+const donateUrl = () => CONFIG.donateUrl.replace("/en-GB/", "/" + (lang === "nl" ? "nl-BE" : "en-GB") + "/");
+// the texts in the page itself: data-t="n" for an element's content, data-ta="n" for its aria-label or alt text
+function applyTexts() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-t]").forEach(el => {
+    if (el.dataset.en === undefined) el.dataset.en = el.innerHTML;
+    el.innerHTML = t(+el.dataset.t, el.dataset.en, { local: '<span class="localTime"></span>' });
+  });
+  document.querySelectorAll("[data-ta]").forEach(el => {
+    const attr = el.hasAttribute("alt") ? "alt" : "aria-label";
+    if (el.dataset.en === undefined) el.dataset.en = el.getAttribute(attr);
+    el.setAttribute(attr, t(+el.dataset.ta, el.dataset.en));
+  });
+  document.querySelectorAll(".localTime").forEach(el => { el.textContent = localTimeSuffix(); });
+  document.querySelectorAll(".lang-switch").forEach(el => {
+    el.innerHTML = LANGS.map(l => `<button data-lang="${l}" aria-pressed="${l === lang}">${l.toUpperCase()}</button>`).join("<span>·</span>");
+  });
+  if (CONFIG.donateUrl) document.getElementById("donateLink").href = donateUrl();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".lang-switch button");
+  if (b && b.dataset.lang !== lang) setLang(b.dataset.lang);
+});
+function setLang(l) {
+  lang = l; locale = LOCALES[l];
+  try { localStorage.setItem(LANG_KEY, l); } catch (e) { /* ignore */ }
+  track(`lang/${l}`, `Language switched to ${l.toUpperCase()}`);
+  applyTexts();
+  // everything on screen that the game wrote itself is written again
+  renderHome();
+  if (!$("notice").hidden) showNotice(noticeVisit);
+  showTogether(readJSON(TOGETHER_KEY, null));
+  const screen = document.querySelector(".screen.active").id;
+  if (screen === "album") renderAlbum();
+  if (screen === "stats") renderStats();
+  if (cur) {
+    $("pTitle").textContent = solved ? ptext(cur, "title") : puzzleLabel();
+    updateMeta();
+    if (screen === "result") showWin(true);
+  }
+}
 
 // ---------- storage ----------
 // a copy in a folder called "test" (or "...-test") is a test site: it keeps its own progress and stats
@@ -966,16 +1230,19 @@ function thumbCanvas(base, prog) {
   ctx.stroke();
   return c;
 }
-function whenText(t) {
-  const ms = t - Date.now(), h = ms / 3600e3;
-  const rel = h < 1 ? `in ${Math.max(1, Math.round(ms / 60000))} min` : h < 24 ? `in ${Math.round(h)} hour${Math.round(h) === 1 ? "" : "s"}` : `in ${Math.round(h / 24)} day${Math.round(h / 24) === 1 ? "" : "s"}`;
-  const abs = new Date(t).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+function whenText(ts) {
+  const ms = ts - Date.now(), h = ms / 3600e3;
+  const hours = Math.round(h), days = Math.round(h / 24);
+  const rel = h < 1 ? t(5, "in {n} min", { n: Math.max(1, Math.round(ms / 60000)) })
+    : h < 24 ? (hours === 1 ? t(6, "in 1 hour") : t(7, "in {n} hours", { n: hours }))
+    : days === 1 ? t(8, "in 1 day") : t(9, "in {n} days", { n: days });
+  const abs = new Date(ts).toLocaleString(locale, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
   return { abs, rel };
 }
 // every 25th puzzle is a small celebration: a ribbon on its card and a line on its result page
 const MILESTONES = [25, 50, 75, 100];
 const isPractice = () => !!(cur && (cur.practice || (cur.original && cur.original.practice)));
-const puzzleLabel = () => isPractice() ? "Practice puzzle" : "Puzzle " + (curIndex + 1);
+const puzzleLabel = () => isPractice() ? t(149, "Practice puzzle") : t(10, "Puzzle {n}", { n: curIndex + 1 });
 function renderPractice() {
   const pp = practice, prog = pp && progress[pp.id];
   const anySolved = puzzles.some(p => progress[p.id] && progress[p.id].solved);
@@ -983,8 +1250,8 @@ function renderPractice() {
   $("howPracticeRow").hidden = !pp;
   if (!pp) return;
   const busy = prog && prog.cells && /[12]/.test(prog.cells);
-  $("practiceText").textContent = `Start with a quick ${pp.width} × ${pp.height} practice puzzle.`;
-  $("practiceBtn").textContent = busy ? "Continue" : "Practice";
+  $("practiceText").textContent = t(166, "Start with a quick {width} × {height} practice puzzle.", { width: pp.width, height: pp.height });
+  $("practiceBtn").textContent = busy ? t(148, "Continue") : t(147, "Practice");
 }
 // the home screen shows at most 12 puzzles, newest first: the ones still to solve, then the solved ones;
 // all puzzles are in the album
@@ -997,17 +1264,17 @@ function renderHome() {
   const list = $("list");
   list.innerHTML = "";
   $("empty").hidden = puzzles.length > 0;
-  $("emptyText").textContent = allPuzzles.length && nextRelease ? `The first puzzle arrives ${whenText(nextRelease).abs}.` : "No puzzles loaded yet.";
+  $("emptyText").textContent = allPuzzles.length && nextRelease ? t(3, "The first puzzle arrives {date}.", { date: whenText(nextRelease).abs }) : t(2, "No puzzles loaded yet.");
   $("openFileBtn").hidden = allPuzzles.length > 0;
   renderPractice();
   renderAlbumLine();
   const nu = $("nextUp");
   nu.hidden = !nextRelease || !puzzles.length;
-  if (nextRelease) { const w = whenText(nextRelease); nu.innerHTML = `Next puzzle: <b>${w.abs}</b> · ${w.rel}`; }
+  if (nextRelease) { const w = whenText(nextRelease); nu.innerHTML = t(4, "Next puzzle: <b>{date}</b> · {when}", { date: w.abs, when: w.rel }); }
   const now = Date.now();
   const shown = homeSelection();
   $("moreLink").hidden = shown.length >= puzzles.length;
-  $("moreLink").textContent = `All ${puzzles.length} puzzles are in your album ›`;
+  $("moreLink").textContent = t(184, "All {n} puzzles are in your album ›", { n: puzzles.length });
   shown.forEach(i => {
     const p = puzzles[i];
     const prog = progress[p.id];
@@ -1020,17 +1287,17 @@ function renderHome() {
     } else {
       b.appendChild(thumbCanvas(p, prog));
     }
-    const name = prog && prog.solved ? p.title : "Puzzle " + (i + 1);
+    const name = prog && prog.solved ? ptext(p, "title") : t(10, "Puzzle {n}", { n: i + 1 });
     const rt = releaseTime(p);
-    const status = (rt !== null && rt > now ? `<span class="tag soon">scheduled ${new Date(rt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>` : "") +
-      (rt !== null && rt <= now && now - rt < 6048e5 ? '<span class="tag new">new this week</span>' : "") +
+    const status = (rt !== null && rt > now ? `<span class="tag soon">${t(11, "scheduled {date}", { date: new Date(rt).toLocaleDateString(locale, { day: "numeric", month: "short" }) })}</span>` : "") +
+      (rt !== null && rt <= now && now - rt < 6048e5 ? `<span class="tag new">${t(12, "new this week")}</span>` : "") +
       (prog && prog.solved
         ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}${prog.hints ? ` · 💡 ${prog.hints}` : ""}</span>`
-        : prog && prog.cells && /[12]/.test(prog.cells) ? '<span class="tag">in progress</span>' : "");
-    const level = p.difficulty && p.difficulty.label ? `${p.difficulty.label} ` : "";
+        : prog && prog.cells && /[12]/.test(prog.cells) ? `<span class="tag">${t(13, "in progress")}</span>` : "");
+    const level = p.difficulty && p.difficulty.label ? `${levelName(p.difficulty)} ` : "";
     b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${level}${stars(p)}${status}</small>`);
-    if (isSpecial(p)) b.insertAdjacentHTML("beforeend", '<span class="tag special ribbon">special</span>');
-    if (MILESTONES.includes(i + 1)) b.insertAdjacentHTML("beforeend", `<span class="tag milestone ribbon">🎉 ${i + 1}th puzzle</span>`);
+    if (isSpecial(p)) b.insertAdjacentHTML("beforeend", `<span class="tag special ribbon">${t(14, "special")}</span>`);
+    if (MILESTONES.includes(i + 1)) b.insertAdjacentHTML("beforeend", `<span class="tag milestone ribbon">${t(167, "🎉 {n}th puzzle", { n: i + 1 })}</span>`);
     b.onclick = () => openPuzzle(i);
     list.appendChild(b);
   });
@@ -1053,15 +1320,18 @@ function setPuzzles(data, persist) {
 function openReminder() {
   const base = gameUrl();
   // Apple: subscribe through webcal://, so no file is downloaded (macOS blocks downloaded calendar files)
-  $("remApple").href = base.replace(/^https?:/, "webcal:") + "crigram-weekly.ics";
+  // the calendar files differ only in their words: crigram-weekly.ics (English), crigram-weekly-nl.ics, …
+  const ics = lang === "en" ? "crigram-weekly.ics" : `crigram-weekly-${lang}.ics`;
+  $("remApple").href = base.replace(/^https?:/, "webcal:") + ics;
+  $("remFile").href = ics; $("remFile").download = ics;
   const first = nextMonday().replace(/-/g, "");
   const q = new URLSearchParams({
     action: "TEMPLATE",
-    text: "New CRIGram puzzle",
+    text: t(127, "New CRIGram puzzle"),
     dates: `${first}T080000/${first}T081500`,
     ctz: "Europe/Brussels",
     recur: "RRULE:FREQ=WEEKLY;BYDAY=MO",
-    details: `A new CRIGram puzzle is ready: cell by cell, decoding our science.\n${base}`,
+    details: t(128, "A new CRIGram puzzle is ready: cell by cell, decoding our science.") + "\n" + base,
   });
   $("remGoogle").href = "https://calendar.google.com/calendar/render?" + q.toString();
   $("reminderBg").classList.add("show");
@@ -1072,10 +1342,10 @@ function openReminder() {
 }));
 
 // a one-time reminder for a linked puzzle that is not out yet, at 08:00 Brussels time on its release day
-function puzzleReminder(p, t) {
-  const day = brusselsDate(t).replace(/-/g, ""), link = `${gameUrl()}?p=${encodeURIComponent(p.id)}`;
+function puzzleReminder(p, ts) {
+  const day = brusselsDate(ts).replace(/-/g, ""), link = `${gameUrl()}?p=${encodeURIComponent(p.id)}`;
   const utc = ms => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const text = "CRIGram puzzle is out", details = `The CRIGram puzzle you were sent is ready: cell by cell, decoding our science.\n${link}`;
+  const text = t(156, "CRIGram puzzle is out"), details = t(157, "The CRIGram puzzle you were sent is ready: cell by cell, decoding our science.") + "\n" + link;
   const esc = v => v.replace(/[\\;,]/g, m => "\\" + m).replace(/\n/g, "\\n");
   const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//CRIG//CRIGram//EN",
     "BEGIN:VTIMEZONE", "TZID:Europe/Brussels",
@@ -1110,23 +1380,25 @@ function pickNotice(prevVisit) {
   const unsolved = puzzles.filter(p => !isSolved(p) && (releaseTime(p) === null || releaseTime(p) <= now));
   if (prevVisit === null) {
     if (Object.keys(progress).length) return null;   // played before this feature existed
-    return 'Welcome to CRIGram! Every puzzle hides a figure from a CRIG paper. New to these puzzles? <button class="link" data-how>Read how to play</button>.';
+    return t(15, 'Welcome to CRIGram! Every puzzle hides a figure from a CRIG paper. New to these puzzles? <button class="link" data-how>Read how to play</button>.');
   }
   const fresh = unsolved.filter(p => { const t = releaseTime(p); return t !== null && t > prevVisit && t <= now; });
-  if (now - prevVisit > 14 * DAY && unsolved.length >= 2) return `We missed you! <b>${unsolved.length} puzzles</b> are waiting for you.`;
-  if (fresh.length === 1) return `New since your last visit: <b>Puzzle ${puzzles.indexOf(fresh[0]) + 1}</b>.`;
-  if (fresh.length > 1) return `<b>${fresh.length} new puzzles</b> since your last visit.`;
+  if (now - prevVisit > 14 * DAY && unsolved.length >= 2) return t(16, "We missed you! <b>{n} puzzles</b> are waiting for you.", { n: unsolved.length });
+  if (fresh.length === 1) return t(17, "New since your last visit: <b>Puzzle {n}</b>.", { n: puzzles.indexOf(fresh[0]) + 1 });
+  if (fresh.length > 1) return t(18, "<b>{n} new puzzles</b> since your last visit.", { n: fresh.length });
   // late in the week, warn about a streak that is about to end
   const weekly = puzzles.filter(p => { const t = releaseTime(p); return t !== null && t <= now && !isSpecial(p); });
   const last = weekly[weekly.length - 1];
   const wd = weekday(brusselsDate(now));
   if (last && !isSolved(last) && now < releaseTime(last) + 7 * DAY && (wd === 5 || wd === 6 || wd === 0)) {
     const st = streaks();
-    if (st.current >= 1) return `Your <b>${st.current}-week streak</b> is on the line: this week's puzzle is open until Monday 06:00.`;
+    if (st.current >= 1) return t(19, "Your <b>{n}-week streak</b> is on the line: this week's puzzle is open until Monday 06:00.", { n: st.current });
   }
   return null;
 }
+let noticeVisit = null;   // kept to write the notice again in another language
 function showNotice(prevVisit) {
+  noticeVisit = prevVisit;
   let msg = pickNotice(prevVisit);
   try { if (msg && sessionStorage.getItem("crigram.dismissed") === msg) msg = null; } catch (e) { /* ignore */ }
   $("notice").hidden = !msg;
@@ -1211,13 +1483,13 @@ function isNewcomer() {
   return !!practice && !done(practice) && !puzzles.some(done);
 }
 // a link to a puzzle that is not out yet: put it in the calendar, and meanwhile practice or play the others
-function showSoon(p, t) {
-  const w = whenText(t), newcomer = isNewcomer();
-  $("soonWhen").innerHTML = `It appears on <b>${w.abs}</b> (${w.rel}). Put it in your calendar, and the reminder brings you straight to it.`;
-  $("soonWait").textContent = newcomer ? "Meanwhile, new to CRIGram? Warm up with a quick practice puzzle." : "Meanwhile, there are other puzzles to solve.";
+function showSoon(p, ts) {
+  const w = whenText(ts), newcomer = isNewcomer();
+  $("soonWhen").innerHTML = t(159, "It appears on <b>{date}</b> ({when}). Put it in your calendar, and the reminder brings you straight to it.", { date: w.abs, when: w.rel });
+  $("soonWait").textContent = newcomer ? t(162, "Meanwhile, new to CRIGram? Warm up with a quick practice puzzle.") : t(163, "Meanwhile, there are other puzzles to solve.");
   $("soonPractice").hidden = !newcomer;
   $("soonPractice").onclick = () => { $("soonBg").classList.remove("show"); openPuzzle(-1); };
-  puzzleReminder(p, t);
+  puzzleReminder(p, ts);
   $("soonBg").classList.add("show");
 }
 // newcomers who arrive through a puzzle link may warm up with the practice puzzle first
@@ -1231,9 +1503,9 @@ function openFromLink() {
   track(`linked/${p.id}`, `Puzzle ${i + 1} opened from a link`);
   if (!isNewcomer()) { openPuzzle(i); return; }
   const d = p.difficulty;
-  $("linkTitle").textContent = `Puzzle ${i + 1}`;
-  $("linkSub").textContent = `${p.width} × ${p.height}` + (d ? ` · ${d.label} ${stars(p)}` : "");
-  $("linkGo").textContent = `Go to puzzle ${i + 1}`;
+  $("linkTitle").textContent = t(10, "Puzzle {n}", { n: i + 1 });
+  $("linkSub").textContent = `${p.width} × ${p.height}` + (d ? ` · ${levelName(d)} ${stars(p)}` : "");
+  $("linkGo").textContent = t(154, "Go to puzzle {n}", { n: i + 1 });
   $("linkPractice").onclick = () => { $("linkBg").classList.remove("show"); linkTarget = p.id; openPuzzle(-1); };
   $("linkGo").onclick = () => { $("linkBg").classList.remove("show"); openPuzzle(i); };
   $("linkBg").classList.add("show");
@@ -1261,7 +1533,7 @@ $("resetBtn").onclick = () => {
 $("howBtn").onclick = () => $("howBg").classList.add("show");
 $("practiceBtn").onclick = () => openPuzzle(-1);
 $("howPracticeBtn").onclick = () => { $("howBg").classList.remove("show"); if (cur) { pauseTimer(); persist(); } openPuzzle(-1); };
-document.querySelectorAll(".localTime").forEach(el => { el.textContent = localTimeSuffix(); });
+applyTexts();
 document.querySelectorAll(".sheet-bg").forEach(bg => bg.addEventListener("click", e => {
   if (e.target === bg || e.target.hasAttribute("data-close")) bg.classList.remove("show");
 }));
@@ -1301,7 +1573,7 @@ function openPuzzle(i) {
   revealImg = null;
   if (cur.image) { revealImg = new Image(); revealImg.onload = drawBoard; revealImg.src = cur.image; }
   if (solved) for (let k = 0; k < cells.length; k++) cells[k] = cur.sol[k] ? 1 : 2;
-  $("pTitle").textContent = solved ? cur.title : puzzleLabel();
+  $("pTitle").textContent = solved ? ptext(cur, "title") : puzzleLabel();
   $("infoBtn").hidden = !solved;
   updateMeta();
   setMode(1);
@@ -1331,7 +1603,7 @@ window.addEventListener("blur", () => { if (cur) { pauseTimer(); persist(); } })
 function updateMeta() {
   if (!cur) return;
   const d = cur.difficulty;
-  $("pMeta").textContent = `${cur.width} × ${cur.height}` + (d ? ` · ${d.label} ${stars(cur)}` : "");
+  $("pMeta").textContent = `${cur.width} × ${cur.height}` + (d ? ` · ${levelName(d)} ${stars(cur)}` : "");
 }
 function persist() {
   if (!cur) return;
@@ -1351,7 +1623,7 @@ $("backBtn").onclick = leavePuzzle;
 document.addEventListener("visibilitychange", () => {
   if (document.hidden && cur) { pauseTimer(); persist(); }
   if (!document.hidden && allPuzzles.length) { applyRelease(); if (!cur) renderHome(); }
-  if (!document.hidden) checkForUpdates();
+  if (!document.hidden) { checkForUpdates(); loadTogether(); }
 });
 
 function setMode(m) {
@@ -1603,7 +1875,7 @@ board.addEventListener("pointerdown", e => {
   if (undoStack.length > 200) undoStack.shift();
   stroke = { start: p, snap: cells.slice(), target, action, axis: null };
   // once per visit, at the first move in any puzzle: tells players apart from visitors who only look around
-  if (!playedSent) { playedSent = true; track("played", "Played (first move of a visit)"); }
+  if (!playedSent) { playedSent = true; track("played", "Played (first move of a visit)"); track(`played/${lang}`, `Played in ${lang.toUpperCase()}`); }
   if (!elapsed && !startedAt && !cells.some(v => v)) {
     if (isPractice()) track("practice/start", "Practice puzzle started");
     else track(`start/${cur.id}`, `Puzzle ${curIndex + 1} started`);
@@ -1683,7 +1955,7 @@ $("undoBtn").onclick = undo;
 $("infoBtn").onclick = () => { if (cur && solved) showWin(true); };
 $("restartBtn").onclick = () => {
   if (!cur) return;
-  if (!confirm("Restart this puzzle?")) return;
+  if (!confirm(t(37, "Restart this puzzle?"))) return;
   cells.fill(0); undoStack = []; solved = false; elapsed = 0; startedAt = 0; revealAlpha = 0;
   progress[cur.id] = { cells: Array.from(cells).join(""), time: 0, solved: false, hints: 0 };
   saveProgress();
@@ -1714,7 +1986,7 @@ $("hintBtn").onclick = () => {
     cells[i] = 0;
     focusCell = i;
     showFlash(new Set([i]), css("--bad"));
-    toast(wrong.length === 1 ? "This cell was wrong. It has been cleared." : `This cell was wrong (${wrong.length} mistakes in total). It has been cleared.`, 3000);
+    toast(wrong.length === 1 ? t(38, "This cell was wrong. It has been cleared.") : t(39, "This cell was wrong ({n} mistakes in total). It has been cleared.", { n: wrong.length }), 3000);
     persist();
     return;
   }
@@ -1737,7 +2009,7 @@ $("hintBtn").onclick = () => {
   let i;
   if (best) {
     i = best.gains[Math.floor(best.gains.length / 2)];
-    toast(`Look at this ${best.row ? "row" : "column"}.`);
+    toast(best.row ? t(40, "Look at this row.") : t(41, "Look at this column."));
   } else {
     const open = [];
     for (let k = 0; k < W * H; k++) if (cells[k] === 0) open.push(k);
@@ -1790,7 +2062,7 @@ function checkWin() {
   for (let k = 0; k < cells.length; k++) cells[k] = cells[k] === 1 ? 1 : 2;
   persist();
   recordSolve();
-  $("pTitle").textContent = cur.title;
+  $("pTitle").textContent = ptext(cur, "title");
   $("infoBtn").hidden = false;
   updateMeta();
   focusCell = -1;
@@ -1845,27 +2117,32 @@ function researchHtml(s) {
   const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
   const plUrl = { "CC BY-NC-SA 4.0": "by-nc-sa", "CC BY-NC 4.0": "by-nc", "CC BY-SA 4.0": "by-sa", "CC BY 4.0": "by" }[pl];
   const meta = [doi ? `doi:${escapeHtml(doi)}` : "",
-    s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? `figure license ${escapeHtml(s.license)}` : "",
-    plUrl ? `puzzle license <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle license ${escapeHtml(pl)}`,
+    s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? t(56, "figure license {license}", { license: escapeHtml(s.license) }) : "",
+    puzzleLicenseText(pl, plUrl),
   ].filter(Boolean).join(" · ");
   const link = paperLink(s);
   if (!parts.length && !meta && !link) return "";
   return (parts.length ? `<div>${parts.join(". ")}.</div>` : "") + (meta ? `<div class="meta">${meta}</div>` : "") +
-    (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">Read the paper ↗</a>` : "");
+    (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${t(59, "Read the paper ↗")}</a>` : "");
 }
 function licenseLine(s, withImage) {
   const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
   const plUrl = { "CC BY-NC-SA 4.0": "by-nc-sa", "CC BY-NC 4.0": "by-nc", "CC BY-SA 4.0": "by-sa", "CC BY 4.0": "by" }[pl];
   const own = /^(own work|to be checked|onbekend)$/i.test(s.license || "");
   return [
-    withImage && s.license && !own ? `image license ${escapeHtml(s.license)}` : "",
-    plUrl ? `puzzle license <a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : `puzzle license ${escapeHtml(pl)}`,
+    withImage && s.license && !own ? t(57, "image license {license}", { license: escapeHtml(s.license) }) : "",
+    puzzleLicenseText(pl, plUrl),
   ].filter(Boolean).join(" · ");
+}
+function puzzleLicenseText(pl, plUrl) {
+  const license = plUrl ? `<a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : escapeHtml(pl);
+  return t(58, "puzzle license {license}", { license });
 }
 // a free puzzle: its link as a clear button under the text (with the maker's own wording), the license as a footnote
 function aboutHtml(s) {
   const link = s.url && /^https?:\/\//i.test(s.url) ? s.url : "";
-  return (link ? `<a class="btn cta" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(s.linkText || "Read more")} ↗</a>` : "") +
+  const tr = cur.translations && cur.translations[lang], linkText = (tr && tr.linkText) || s.linkText;
+  return (link ? `<a class="btn cta" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${linkText ? escapeHtml(linkText) + " ↗" : t(60, "Read more ↗")}</a>` : "") +
     `<p class="license-note">${licenseLine(s, !!cur.image)}</p>`;
 }
 function paperLink(s) {
@@ -1912,36 +2189,38 @@ function showWin(revisit) {
   }
   const s = cur.source || {};
   const pairClass = cur.image ? "compare" : "compare single";
-  const layTitle = cur.layTitle || cur.headline || "";
-  $("rTitle").textContent = revisit ? cur.title : "Solved!";
-  $("rMeta").textContent = `${cur.width} × ${cur.height}` + (cur.difficulty ? ` · ${cur.difficulty.label} ${stars(cur)}` : "");
+  const layTitle = ptext(cur, "layTitle") || cur.headline || "", title = ptext(cur, "title");
+  $("rTitle").textContent = revisit ? title : t(50, "Solved!");
+  $("rMeta").textContent = `${cur.width} × ${cur.height}` + (cur.difficulty ? ` · ${levelName(cur.difficulty)} ${stars(cur)}` : "");
   const isFree = cur.kind === "free";
   const research = isFree ? aboutHtml(s) : researchHtml(s);
   $("story").innerHTML = `
     <div class="${pairClass}">
-      <figure><button class="pixbtn" id="winGrid" aria-label="View the grid"><img class="pix" src="${crigramImage(cur)}" alt="The solved CRIGram"></button><figcaption>Your CRIGram</figcaption></figure>
-      ${cur.image ? `<figure><img src="${cur.image}" alt="${isFree ? "The original image" : "The detail of the original figure"}"><figcaption>${isFree ? "The original image" : "The original figure"}</figcaption></figure>` : ""}
+      <figure><button class="pixbtn" id="winGrid" aria-label="${t(70, "View the grid")}"><img class="pix" src="${crigramImage(cur)}" alt="${t(71, "The solved CRIGram")}"></button><figcaption>${t(51, "Your CRIGram")}</figcaption></figure>
+      ${cur.image ? `<figure><img src="${cur.image}" alt="${isFree ? t(53, "The original image") : t(72, "The detail of the original figure")}"><figcaption>${isFree ? t(53, "The original image") : t(52, "The original figure")}</figcaption></figure>` : ""}
     </div>
-    ${!isPractice() && MILESTONES.includes(curIndex + 1) ? `<div class="milestone-line">🎉 Our ${curIndex + 1}th puzzle</div>` : ""}
-    ${layTitle ? `<div class="kicker">Puzzle: ${escapeHtml(cur.title)}</div>` : ""}
-    <h2 style="margin-top:${layTitle ? 2 : 14}px">${escapeHtml(layTitle || cur.title)}</h2>
-    <div class="summary">${paragraphs(cur.laySummary || cur.description)}</div>
-    ${isFree ? research : research ? `<section class="box"><div class="box-title">The research</div>${research}</section>` : ""}
+    ${!isPractice() && MILESTONES.includes(curIndex + 1) ? `<div class="milestone-line">${t(168, "🎉 Our {n}th puzzle", { n: curIndex + 1 })}</div>` : ""}
+    ${layTitle ? `<div class="kicker">${t(54, "Puzzle: {title}", { title: escapeHtml(title) })}</div>` : ""}
+    <h2 style="margin-top:${layTitle ? 2 : 14}px">${escapeHtml(layTitle || title)}</h2>
+    <div class="summary">${paragraphs(ptext(cur, "laySummary") || cur.description)}</div>
+    ${isFree ? research : research ? `<section class="box"><div class="box-title">${t(55, "The research")}</div>${research}</section>` : ""}
     <section class="box">
-      <div class="box-title">Your result</div>
+      <div class="box-title">${t(61, "Your result")}</div>
       <div class="result-row">
-        <span class="solved">✓ Solved in ${fmtTime(prog.time || 0)} · ${hints ? `${hints} hint${hints > 1 ? "s" : ""}` : "no hints"}</span>
-        ${isPractice() ? "" : '<button class="btn slim" id="shareBtn">Share</button>'}
+        <span class="solved">${hints === 0 ? t(62, "✓ Solved in {time} · no hints", { time: fmtTime(prog.time || 0) })
+          : hints === 1 ? t(63, "✓ Solved in {time} · 1 hint", { time: fmtTime(prog.time || 0) })
+          : t(64, "✓ Solved in {time} · {n} hints", { time: fmtTime(prog.time || 0), n: hints })}</span>
+        ${isPractice() ? "" : `<button class="btn slim" id="shareBtn">${t(65, "Share")}</button>`}
       </div>
       <div class="community-line" id="community" hidden></div>
     </section>
-    ${next >= 0 ? '<button class="btn primary wide" id="winNext">Next puzzle</button>'
-      : `<p class="done-note">You've solved all puzzles${nextRelease ? `. The next one arrives ${whenText(nextRelease).abs}` : ""}.</p>`}
-    ${CONFIG.donateUrl && !isPractice() ? `<section class="box donate-box"><p>The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</p><a class="btn donate" id="winDonate" href="${escapeHtml(CONFIG.donateUrl)}" target="_blank" rel="noopener">♥ Donate</a></section>` : ""}
+    ${next >= 0 ? `<button class="btn primary wide" id="winNext">${t(66, "Next puzzle")}</button>`
+      : `<p class="done-note">${nextRelease ? t(68, "You've solved all puzzles. The next one arrives {date}.", { date: whenText(nextRelease).abs }) : t(67, "You've solved all puzzles.")}</p>`}
+    ${CONFIG.donateUrl && !isPractice() ? `<section class="box donate-box"><p>${t(24, "The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.")}</p><a class="btn donate" id="winDonate" href="${escapeHtml(donateUrl())}" target="_blank" rel="noopener">${t(25, "♥ Donate")}</a></section>` : ""}
     <nav class="footer-links">
-      <button class="link" id="winHome">All puzzles</button>
-      <button class="link" id="reminderLink2">Weekly reminder</button>
-      ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">Feedback &amp; CRIG news</a>` : ""}
+      <button class="link" id="winHome">${t(69, "All puzzles")}</button>
+      <button class="link" id="reminderLink2">${t(28, "Weekly reminder")}</button>
+      ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">${t(23, "Feedback &amp; CRIG news")}</a>` : ""}
     </nav>`;
   showScreen("result");
   window.scrollTo(0, 0);
@@ -1968,7 +2247,10 @@ function gameUrl() { return location.href.split("#")[0].split("?")[0].replace(/[
 function shareText(info) {
   const { n, time, hints } = info;
   // the link opens this same puzzle for whoever receives it
-  return `I decoded CRIGram #${n} 🧬 (${fmtTime(time)}, ${hints ? `${hints} hint${hints > 1 ? "s" : ""}` : "no hints"}) Can you crack it? ${gameUrl()}?p=${encodeURIComponent(info.p.id)}`;
+  const v = { n, time: fmtTime(time), link: `${gameUrl()}?p=${encodeURIComponent(info.p.id)}` };
+  return hints === 0 ? t(170, "I decoded CRIGram #{n} 🧬 ({time}, no hints) Can you crack it? {link}", v)
+    : hints === 1 ? t(171, "I decoded CRIGram #{n} 🧬 ({time}, 1 hint) Can you crack it? {link}", v)
+    : t(172, "I decoded CRIGram #{n} 🧬 ({time}, {hints} hints) Can you crack it? {link}", { ...v, hints });
 }
 // a spoiler-free result card: number, time, hints, difficulty, but not the picture
 function makeShareCard(info) {
@@ -1980,7 +2262,7 @@ function makeShareCard(info) {
   CRIG_COLORS.slice(1).forEach((col, i) => { x.fillStyle = col; x.fillRect(i * S / 6, 300, S / 6 + 1, 18); });
   x.textAlign = "center"; x.fillStyle = "#ffffff";
   x.font = `800 120px ${font}`; x.fillText("CRIGram", S / 2, 165);
-  x.font = `400 40px ${font}`; x.fillText("cell by cell, decoding our science", S / 2, 240);
+  x.font = `400 40px ${font}`; x.fillText(t(1, "cell by cell, decoding our science"), S / 2, 240);
   // decorative "C" mosaic, the same as the app icon
   const C = [".XXXX", "XX...", "X....", "XX...", ".XXXX"], cell = 46, gx = S / 2 - 2.5 * cell, gy = 370;
   let k = 0;
@@ -1989,13 +2271,13 @@ function makeShareCard(info) {
     x.fillRect(gx + col * cell + 2, gy + r * cell + 2, cell - 4, cell - 4);
   }));
   x.fillStyle = "#1b2233";
-  x.font = `800 96px ${font}`; x.fillText(`#${info.n} decoded`, S / 2, 740);
+  x.font = `800 96px ${font}`; x.fillText(t(90, "#{n} decoded", { n: info.n }), S / 2, 740);
   // the stars first; the time small, in brackets
   const d = info.p.difficulty;
   if (d && d.stars) { x.font = `400 52px ${font}`; x.fillStyle = "#fcb033"; x.fillText("★".repeat(d.stars) + "☆".repeat(4 - d.stars), S / 2, 820); }
   x.font = `400 40px ${font}`; x.fillStyle = "#677086";
-  x.fillText(`(${fmtTime(info.time)}, ${info.hints ? info.hints + " hint" + (info.hints > 1 ? "s" : "") : "no hints"})`, S / 2, 892);
-  x.fillStyle = "#0079c1"; x.font = `700 46px ${font}`; x.fillText("Can you crack it?", S / 2, 985);
+  x.fillText(`(${fmtTime(info.time)}, ${hintsText(info.hints)})`, S / 2, 892);
+  x.fillStyle = "#0079c1"; x.font = `700 46px ${font}`; x.fillText(t(92, "Can you crack it?"), S / 2, 985);
   x.fillStyle = "#677086"; x.font = `400 36px ${font}`; x.fillText(gameUrl().replace(/^https?:\/\//, "").replace(/\/$/, ""), S / 2, 1040);
   return new Promise(resolve => c.toBlob(b => resolve(b ? new File([b], `crigram-${info.n}.png`, { type: "image/png" }) : null), "image/png"));
 }
@@ -2022,17 +2304,18 @@ async function shareResult(info) {
     $("sharePreview").src = url; $("shareDownload").href = url; $("shareDownload").hidden = false; $("sharePreview").hidden = false;
   } else { $("shareDownload").hidden = true; $("sharePreview").hidden = true; }
   $("shareCopy").onclick = async () => {
-    try { await navigator.clipboard.writeText(text); toast("Copied! Paste it in a message or post."); }
-    catch (e) { prompt("Copy this text:", text); }
+    try { await navigator.clipboard.writeText(text); toast(t(99, "Copied! Paste it in a message or post.")); }
+    catch (e) { prompt(t(100, "Copy this text:"), text); }
   };
   $("shareBg").classList.add("show");
 }
 
 // ---------- community statistics (read from GoatCounter, when its public counts are enabled) ----------
 const BUCKETS = [
-  ["under-1-min", "less than a minute"], ["1-2-min", "1 to 2 minutes"], ["2-5-min", "2 to 5 minutes"],
-  ["5-10-min", "5 to 10 minutes"], ["10-20-min", "10 to 20 minutes"], ["over-20-min", "more than 20 minutes"],
+  ["under-1-min", 81, "less than a minute"], ["1-2-min", 82, "1 to 2 minutes"], ["2-5-min", 83, "2 to 5 minutes"],
+  ["5-10-min", 84, "5 to 10 minutes"], ["10-20-min", 85, "10 to 20 minutes"], ["over-20-min", 86, "more than 20 minutes"],
 ];
+const bucketText = b => t(b[1], b[2]);
 async function gcCount(path) {
   // returns a number, 0 when nobody has done it yet, or null when the counts cannot be read
   for (const p of [path, "/" + path]) {
@@ -2054,24 +2337,27 @@ async function showCommunity(p, myTime, myHints) {
   const myBucket = BUCKETS.find(b => b[0] === timeBucket(myTime));
   let html = "";
   if (solved < 3) {
-    html += solved ? `Solved by ${solved} player${solved === 1 ? "" : "s"} so far: you're one of the first!` : "You're one of the very first players to solve this one!";
+    html += solved === 1 ? t(73, "Solved by 1 player so far: you're one of the first!")
+      : solved ? t(74, "Solved by {n} players so far: you're one of the first!", { n: solved })
+      : t(75, "You're one of the very first players to solve this one!");
   } else {
     const [times, hints] = await Promise.all([
       Promise.all(BUCKETS.map(b => gcCount(`solved/${p.id}/time-${b[0]}`))),
       Promise.all(["0", "1", "2-or-more"].map(h => gcCount(`solved/${p.id}/hints-${h}`))),
     ]);
     if (cur !== p) return;
-    html += `Solved by <b>${solved.toLocaleString("en-GB")}</b> players.`;
+    html += t(76, "Solved by <b>{n}</b> players.", { n: solved.toLocaleString(locale) });
     const tTotal = times.reduce((a, b) => a + (b || 0), 0);
     if (tTotal >= 3) {
       let acc = 0, mid = 0;
       for (let i = 0; i < times.length; i++) { acc += times[i] || 0; if (acc >= tTotal / 2) { mid = i; break; } }
-      html += ` Most needed <b>${BUCKETS[mid][1]}</b>` + (myBucket ? `; you: ${myBucket[1]}.` : ".");
+      html += " " + (myBucket ? t(77, "Most needed <b>{range}</b>; you: {mine}.", { range: bucketText(BUCKETS[mid]), mine: bucketText(myBucket) })
+        : t(78, "Most needed <b>{range}</b>.", { range: bucketText(BUCKETS[mid]) }));
     }
     const hTotal = hints.reduce((a, b) => a + (b || 0), 0);
-    if (hTotal >= 3) html += ` <b>${Math.round(100 * (hints[0] || 0) / hTotal)} %</b> solved it without hints.`;
+    if (hTotal >= 3) html += " " + t(79, "<b>{p} %</b> solved it without hints.", { p: Math.round(100 * (hints[0] || 0) / hTotal) });
   }
-  html += ' <small>(all players, updated every few hours)</small>';
+  html += ` <small>${t(80, "(all players, updated every few hours)")}</small>`;
   box.innerHTML = html;
   box.hidden = false;
 }
@@ -2091,6 +2377,7 @@ function streaks() {
   for (; k >= 0 && inTime[k]; k--) current++;
   return { current, longest, weekly: weekly.length };
 }
+const hintsText = h => (h === 0 || !h ? t(191, "no hints") : h === 1 ? t(192, "1 hint") : t(193, "{n} hints", { n: h }));
 function renderStats() {
   const solvedIds = puzzles.filter(p => stats[p.id]).map(p => p.id);
   const recs = solvedIds.map(id => stats[id]);
@@ -2101,23 +2388,23 @@ function renderStats() {
   const tile = (v, l) => `<div class="tile"><b>${v}</b><small>${l}</small></div>`;
   $("statsBody").innerHTML = `
     <div class="tiles">
-      ${tile(`${solvedIds.length}/${puzzles.length}`, "solved")}
-      ${tile(recs.length ? Math.round(100 * noHints / recs.length) + " %" : "–", "without hints")}
-      ${tile(times.length ? fmtTime(median) : "–", "median time")}
-      ${tile(times.length ? fmtTime(times[0]) : "–", "fastest")}
-      ${tile(st.current, st.current === 1 ? "week streak" : "weeks streak")}
-      ${tile(st.longest, "longest streak")}
+      ${tile(`${solvedIds.length}/${puzzles.length}`, t(104, "solved"))}
+      ${tile(recs.length ? Math.round(100 * noHints / recs.length) + " %" : "–", t(105, "without hints"))}
+      ${tile(times.length ? fmtTime(median) : "–", t(106, "median time"))}
+      ${tile(times.length ? fmtTime(times[0]) : "–", t(107, "fastest"))}
+      ${tile(st.current, st.current === 1 ? t(108, "week streak") : t(109, "weeks streak"))}
+      ${tile(st.longest, t(110, "longest streak"))}
     </div>
-    <h3 class="section-title">Puzzles</h3>
+    <h3 class="section-title">${t(111, "Puzzles")}</h3>
     <ul class="stats-list">
       ${puzzles.map((p, i) => {
         const r = stats[p.id];
-        if (!r) return `<li class="open"><span>Puzzle ${i + 1}</span><span>not solved yet</span></li>`;
-        const date = new Date(r.first).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-        return `<li><span>${i + 1}. ${escapeHtml(p.title)}</span><span>${fmtTime(r.time)} · ${r.hints ? r.hints + " hint" + (r.hints > 1 ? "s" : "") : "no hints"} · ${date}</span></li>`;
+        if (!r) return `<li class="open"><span>${t(10, "Puzzle {n}", { n: i + 1 })}</span><span>${t(112, "not solved yet")}</span></li>`;
+        const date = new Date(r.first).toLocaleDateString(locale, { day: "numeric", month: "short" });
+        return `<li><span>${i + 1}. ${escapeHtml(ptext(p, "title"))}</span><span>${fmtTime(r.time)} · ${hintsText(r.hints)} · ${date}</span></li>`;
       }).join("")}
     </ul>
-    <p style="margin-top:14px;font-size:13px;color:var(--muted)">Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time${localTimeSuffix()}), or occasionally on special dates. Your streak counts the weeks in a row in which you solved the Monday puzzle before the next one came out. Special puzzles and the puzzles from the launch week don't count.</p>`;
+    <p style="margin-top:14px;font-size:13px;color:var(--muted)">${t(113, "Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time{local}), or occasionally on special dates. Your streak counts the weeks in a row in which you solved the Monday puzzle before the next one came out. Special puzzles and the puzzles from the launch week don't count.", { local: localTimeSuffix() })}</p>`;
 }
 $("statsBtn").onclick = () => { renderStats(); showScreen("stats"); };
 
@@ -2127,7 +2414,7 @@ function renderAlbumLine() {
   const n = puzzles.filter(isSolvedP).length, total = puzzles.length, line = $("albumLine");
   line.hidden = !n;
   if (!n) return;
-  line.innerHTML = `<span>📖 <b>Your album</b>: ${n} of ${total} figure${total === 1 ? "" : "s"} uncovered</span>` +
+  line.innerHTML = `<span>${t(175, `📖 <b>Your album</b>: {n} of {total} figure${total === 1 ? "" : "s"} uncovered`, { n, total })}</span>` +
     `<span class="track"><i style="width:${Math.round(100 * n / total)}%"></i></span><span class="go">›</span>`;
 }
 // albumAll (declared with the history code): false shows only the uncovered figures, true every puzzle
@@ -2157,9 +2444,10 @@ function questionImage() {
 }
 function renderAlbum() {
   const n = puzzles.filter(isSolvedP).length, rest = puzzles.length - n;
-  $("albumMeta").textContent = `${n} of ${puzzles.length} uncovered`;
+  $("albumMeta").textContent = t(177, "{n} of {total} uncovered", { n, total: puzzles.length });
   $("albumToggle").hidden = !rest;
-  $("albumToggle").textContent = albumAll ? "Show only the uncovered figures" : `Also show the ${rest} puzzle${rest === 1 ? "" : "s"} still to solve`;
+  $("albumToggle").textContent = albumAll ? t(186, "Show only the uncovered figures")
+    : rest === 1 ? t(189, "Also show the puzzle still to solve") : t(185, "Also show the {n} puzzles still to solve", { n: rest });
   const body = $("albumBody");
   body.innerHTML = "";
   puzzles.map((p, i) => i).reverse().filter(i => albumAll || isSolvedP(puzzles[i])).forEach(i => {
@@ -2170,10 +2458,10 @@ function renderAlbum() {
       const s = p.source || {}, meta = p.kind === "free" ? "" : [s.journal, s.year].filter(Boolean).join(", ");
       b.innerHTML = `<img alt=""><b></b><small></small>`;
       b.querySelector("img").src = p.image || crigramImage(p);
-      b.querySelector("b").textContent = p.layTitle || p.title;
+      b.querySelector("b").textContent = ptext(p, "layTitle") || ptext(p, "title");
       b.querySelector("small").textContent = `#${i + 1}` + (meta ? ` · ${meta}` : "");
     } else {
-      b.innerHTML = `<img alt="" src="${questionImage()}"><b>Puzzle ${i + 1}</b><small>not uncovered yet</small>`;
+      b.innerHTML = `<img alt="" src="${questionImage()}"><b>${t(10, "Puzzle {n}", { n: i + 1 })}</b><small>${t(178, "not uncovered yet")}</small>`;
     }
     b.onclick = () => openPuzzle(i);
     body.appendChild(b);
@@ -2189,23 +2477,29 @@ $("albumBack").onclick = () => { renderHome(); showScreen("home"); };
 // the time of all players: per puzzle its solves times the average solve time, read from its six time ranges
 // (all solves since launch); a puzzle with fewer than 3 solves uses its difficulty estimate instead
 const TOGETHER_KEY = "crigram.together" + KEY_SUFFIX;
-function showTogether(t) {
+function showTogether(tg) {
   const box = $("together");
-  box.hidden = !t || t.solves < 20;   // only once there is something to celebrate
+  box.hidden = !tg || tg.solves < 20;   // only once there is something to celebrate
   if (box.hidden) return;
-  const h = t.minutes / 60, hours = h >= 2;
+  const h = tg.minutes / 60, hours = h >= 2;
   const score = (n, label) => `<div><b>${n}</b><small>${label}</small></div>`;
-  box.innerHTML = '<div class="head">All players so far</div><div class="scores">' +
-    score(t.solves.toLocaleString("en-GB"), "puzzles solved") +
-    score(hours ? Math.round(h).toLocaleString("en-GB") : Math.round(t.minutes), hours ? "hours of puzzling" : "minutes of puzzling") +
-    score(t.papers, `cancer research paper${t.papers === 1 ? "" : "s"} in the spotlight`) + "</div>";
+  box.innerHTML = `<div class="head">${t(179, "All players so far")}</div><div class="scores">` +
+    score(tg.solves.toLocaleString(locale), t(180, "puzzles solved")) +
+    score(Math.round(hours ? h : tg.minutes).toLocaleString(locale), hours ? t(181, "hours of puzzling") : t(187, "minutes of puzzling")) +
+    score(tg.papers, tg.papers === 1 ? t(188, "cancer research paper in the spotlight") : t(182, "cancer research papers in the spotlight")) + "</div>";
 }
+// called at start and each time the game comes back to the foreground
+let togetherBusy = false;
 async function loadTogether() {
-  if (!CONFIG.goatcounter || !/^https?:/.test(location.protocol)) return;
+  if (!CONFIG.goatcounter || !/^https?:/.test(location.protocol) || togetherBusy) return;
   const now = Date.now(), live = puzzles.filter(p => releaseTime(p) === null || releaseTime(p) <= now);
   const cached = readJSON(TOGETHER_KEY, null);
   if (cached) showTogether(cached);
-  if (cached && now - cached.at < 3 * 3600e3 && cached.n === live.length) return;   // at most every 3 hours
+  if (cached && now - cached.at < 15 * 60e3 && cached.n === live.length) return;   // at most every 15 minutes
+  togetherBusy = true;
+  try { await refreshTogether(now, live); } finally { togetherBusy = false; }
+}
+async function refreshTogether(now, live) {
   const MID = [0.5, 1.5, 3.5, 7.5, 15, 30];   // minutes in the middle of each time range; "over 20 minutes" counts as 30
   const counts = await Promise.all(live.map(p => gcCount(`solved/${p.id}`)));
   if (counts.some(c => c === null)) return;

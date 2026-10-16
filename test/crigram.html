@@ -125,7 +125,8 @@
   .lang-switch button { background: none; border: 0; padding: 6px 5px; color: inherit; opacity: .7; font-weight: 600; letter-spacing: .5px; }
   .lang-switch button[aria-pressed="true"] { opacity: 1; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
   .lang-switch span { opacity: .5; }
-  .hero-lang { position: absolute; top: calc(6px + env(safe-area-inset-top)); right: 8px; color: #fff; }
+  /* in line with the right edge of the puzzle cards (the 720 px column), not the edge of a wide window */
+  .hero-lang { position: absolute; top: calc(6px + env(safe-area-inset-top)); right: max(11px, calc((100% - 720px) / 2 + 11px)); color: #fff; }
   .sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
   .sheet-head .lang-switch { color: var(--muted); flex: none; }
   .sheet-head .lang-switch button[aria-pressed="true"] { color: var(--ink); }
@@ -886,7 +887,7 @@ nl: {
   186: "Toon alleen de ontdekte figuren",
   187: "minuten gepuzzeld",
   188: "kankeronderzoeksartikel in de kijker",
-  189: "Toon ook de puzzel die je nog moet oplossen.",
+  189: "Toon ook de puzzel die je nog moet oplossen",
   190: "Voorbeeld: een rij met de getallen 1 4 1",
   191: "zonder hints",
   192: "1 hint",

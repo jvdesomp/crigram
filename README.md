@@ -29,7 +29,7 @@ Each puzzle shows the authors, the journal, the DOI and the license of the origi
 
 ## About
 
-CRIGram was created by Jo Vandesompele (CRIG, Ghent University). The code was written from scratch with the help of Claude (Opus 5.5), an AI assistant by Anthropic. It does not reuse code from other puzzle games. The puzzle type itself, the nonogram, was invented in 1987 by Non Ishida and Tetsuya Nishio.
+CRIGram was created by Jo Vandesompele (CRIG, Ghent University) on October 11, 2026. The code was written from scratch with the help of Claude (Opus 5.5), an AI assistant by Anthropic. It does not reuse code from other puzzle games. The puzzle type itself, the nonogram, was invented in 1987 by Non Ishida and Tetsuya Nishio.
 
 The puzzles are made with a companion tool, the CRIGram maker, which turns a figure into a grid, checks that the puzzle has exactly one solution that can be found by logic alone, and estimates its difficulty.
 

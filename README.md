@@ -25,7 +25,7 @@ CRIGram speaks English and Dutch. It follows the language of your browser (on a 
 
 ## The science behind the puzzles
 
-Each puzzle shows the authors, the journal, the DOI and the license of the original figure after it is solved. Figures are reused under their open-access license (for example CC BY 4.0) or with permission.
+Each puzzle shows the authors, the journal and the license of the original figure after it is solved, with a link to the paper. Figures are reused under their open-access license (for example CC BY 4.0) or with permission.
 
 ## Privacy
 

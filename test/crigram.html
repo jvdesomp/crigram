@@ -73,6 +73,8 @@
   .pcard small { color: var(--muted); font-size: 12px; }
   .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); margin-left: 4px; }
   .tag.done { background: rgba(31,138,76,.14); color: var(--ok); }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: -2px; }
+  .tags .tag { margin-left: 0; }
   .tag.special { background: #a54499; color: #fff; }
   .tag.ribbon { position: absolute; top: 16px; left: 16px; margin: 0; font-size: 12px; font-weight: 600; padding: 2px 9px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .tag.milestone { background: #fcb033; color: #1b2233; }
@@ -1286,7 +1288,8 @@ function renderHome() {
       (prog && prog.solved
         ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}${prog.hints ? ` · 💡 ${prog.hints}` : ""}</span>`
         : prog && prog.cells && /[12]/.test(prog.cells) ? `<span class="tag">${t(13, "in progress")}</span>` : "");
-    b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${sizeStars(p)}${status}</small>`);
+    // the badges on a row of their own, left-aligned with the size and stars
+    b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${sizeStars(p)}</small>` + (status ? `<span class="tags">${status}</span>` : ""));
     if (isSpecial(p)) b.insertAdjacentHTML("beforeend", `<span class="tag special ribbon">${t(14, "special")}</span>`);
     if (MILESTONES.includes(i + 1)) b.insertAdjacentHTML("beforeend", `<span class="tag milestone ribbon">${t(167, "🎉 {n}th puzzle", { n: i + 1 })}</span>`);
     b.onclick = () => openPuzzle(i);

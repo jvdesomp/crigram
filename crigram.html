@@ -2513,7 +2513,13 @@ async function refreshTogether(now, live) {
   const MID = [0.5, 1.5, 3.5, 7.5, 15, 30];   // minutes in the middle of each time range; "over 20 minutes" counts as 30
   const counts = await Promise.all(live.map(p => gcCount(`solved/${p.id}`)));
   if (counts.some(c => c === null)) return;
-  const ranges = await Promise.all(live.map((p, k) => counts[k] >= 3 ? Promise.all(BUCKETS.map(b => gcCount(`solved/${p.id}/time-${b[0]}`))) : null));
+  // the time ranges one puzzle at a time (fewer requests at once); a count that could not be read would act as a 0
+  // and push the average up or down, so an incomplete set is not used: the previous result stays
+  const ranges = [];
+  for (const [k, p] of live.entries()) {
+    ranges.push(counts[k] >= 3 ? await Promise.all(BUCKETS.map(b => gcCount(`solved/${p.id}/time-${b[0]}`))) : null);
+    if (ranges[k] && ranges[k].some(c => c === null)) return;
+  }
   const average = (p, r) => {
     const n = r ? r.reduce((a, c) => a + (c || 0), 0) : 0;
     if (n >= 3) return r.reduce((a, c, i) => a + (c || 0) * MID[i], 0) / n;

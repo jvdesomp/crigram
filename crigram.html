@@ -739,7 +739,7 @@ nl: {
   16: "We hebben je gemist! <b>{n} puzzels</b> wachten op jou.",
   17: "Nieuw sedert je laatste bezoek: <b>puzzel {n}</b>.",
   18: "<b>{n} nieuwe puzzels</b> sedert je laatste bezoek.",
-  19: "Je <b>streak van {n} weken</b> staat op het spel: de puzzel van deze week staat open tot maandag 06:00.",
+  19: "Je <b>reeks van {n} weken</b> staat op het spel: de puzzel van deze week staat open tot maandag 06:00.",
   20: "Sluiten",
   21: "Vind je CRIGram leuk?",
   22: "Laat ons weten wat je ervan vindt, of schrijf je in voor CRIG-nieuws.",
@@ -2468,7 +2468,7 @@ function renderAlbum() {
       const s = p.source || {}, meta = p.kind === "free" ? "" : [s.journal, s.year].filter(Boolean).join(", ");
       b.innerHTML = `<img alt=""><b></b><small></small>`;
       b.querySelector("img").src = p.image || crigramImage(p);
-      b.querySelector("b").textContent = ptext(p, "layTitle") || ptext(p, "title");
+      b.querySelector("b").textContent = ptext(p, "title");   // the short puzzle title, as on the home screen and in the stats
       b.querySelector("small").textContent = `#${i + 1}` + (meta ? ` · ${meta}` : "");
     } else {
       b.innerHTML = `<img alt="" src="${questionImage()}"><b>${t(10, "Puzzle {n}", { n: i + 1 })}</b><small>${t(178, "not uncovered yet")}</small>`;

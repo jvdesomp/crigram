@@ -2468,7 +2468,7 @@ function renderAlbum() {
       const s = p.source || {}, meta = p.kind === "free" ? "" : [s.journal, s.year].filter(Boolean).join(", ");
       b.innerHTML = `<img alt=""><b></b><small></small>`;
       b.querySelector("img").src = p.image || crigramImage(p);
-      b.querySelector("b").textContent = ptext(p, "layTitle") || ptext(p, "title");
+      b.querySelector("b").textContent = ptext(p, "title");   // the short puzzle title, as on the home screen and in the stats
       b.querySelector("small").textContent = `#${i + 1}` + (meta ? ` · ${meta}` : "");
     } else {
       b.innerHTML = `<img alt="" src="${questionImage()}"><b>${t(10, "Puzzle {n}", { n: i + 1 })}</b><small>${t(178, "not uncovered yet")}</small>`;

@@ -68,6 +68,8 @@
   .pcard canvas, .pcard img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 6px; background: var(--clue-bg); display: block; image-rendering: pixelated; }
   .pcard img { image-rendering: auto; }
   .pcard b { font-size: 14px; line-height: 1.25; }
+  /* long words (e.g. patiëntgerapporteerde) break with a hyphen, following the page language, instead of sticking out */
+  .pcard b, .album-item b, .story h2, .stats-list li span:first-child { overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
   .pcard small { color: var(--muted); font-size: 12px; }
   .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); margin-left: 4px; }
   .tag.done { background: rgba(31,138,76,.14); color: var(--ok); }

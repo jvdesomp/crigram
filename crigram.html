@@ -91,8 +91,7 @@
   .box .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
   .text-link { color: var(--blue); }
   a.btn.cta { display: block; margin-top: 14px; border: 1.5px solid var(--blue); color: var(--blue); font-weight: 600; }
-  .license-note { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
-  .license-note .link { font-size: 12px !important; }
+  .license-note { color: var(--muted); font-size: 12px; text-align: center; margin: 14px 0 0; }
   .paper-link { display: inline-block; margin-top: 8px; font-weight: 600; color: var(--blue); text-decoration: none; }
   .result-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .result-row .solved { font-weight: 600; color: var(--ok); }
@@ -101,7 +100,7 @@
   .community-line small { color: var(--muted); }
   .pixbtn { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
   .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; margin-top: 16px; }
-  .footer-links .link { color: var(--muted); font-size: 13px; }
+  .footer-links .link { color: var(--blue); font-size: 13px; }
   .btn.wide { display: block; width: 100%; margin-top: 18px; }
   .done-note { text-align: center; color: var(--muted); font-size: 14px; margin-top: 18px; }
   .community { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 14px; }
@@ -2123,33 +2122,29 @@ function researchHtml(s) {
   else if (s.year) parts.push(escapeHtml(s.year));
   if (s.article) parts.push(`<i>${escapeHtml(s.article)}</i>`);
   if (s.journal) parts.push(escapeHtml(s.journal));
-  const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
-  const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
-  const meta = [doi ? `doi:${escapeHtml(doi)}` : "",
-    s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? t(56, "figure license {license}", { license: licenseName(s.license) }) : "",
-    t(58, "puzzle license {license}", { license: escapeHtml(pl) }),
-  ].filter(Boolean).join(" · ");
+  // no DOI as text ("Read the paper" links to it) and no licenses (they are a footnote at the bottom of the page)
   const link = paperLink(s);
-  if (!parts.length && !meta && !link) return "";
-  return (parts.length ? `<div>${parts.join(". ")}.</div>` : "") + (meta ? `<div class="meta">${meta}</div>` : "") +
+  if (!parts.length && !link) return "";
+  return (parts.length ? `<div>${parts.join(". ")}.</div>` : "") +
     (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${t(59, "Read the paper ↗")}</a>` : "");
 }
-function licenseLine(s, withImage) {
-  const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
-  const own = /^(own work|to be checked|onbekend)$/i.test(s.license || "");
+// the licenses as one footnote at the bottom of the result page: the figure's (or image's) and the puzzle's own
+function licenseLine(s) {
+  const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0", unknown = /^(to be checked|onbekend)$/i.test(s.license || "");
+  const free = cur.kind === "free", own = /^own work$/i.test(s.license || "");
   return [
-    withImage && s.license && !own ? t(57, "image license {license}", { license: licenseName(s.license) }) : "",
+    !free && s.license && !unknown ? t(56, "figure license {license}", { license: licenseName(s.license) }) : "",
+    free && cur.image && s.license && !unknown && !own ? t(57, "image license {license}", { license: licenseName(s.license) }) : "",
     t(58, "puzzle license {license}", { license: escapeHtml(pl) }),
   ].filter(Boolean).join(" · ");
 }
 // licenses are plain text (no links: the result page has enough buttons); the maker's words translated, CC names as they are
 const licenseName = l => escapeHtml(({ "with permission": t(194, "with permission"), "own work": t(195, "own work") })[l] || l);
-// a free puzzle: its link as a clear button under the text (with the maker's own wording), the license as a footnote
+// a free puzzle: its link as a clear button under the text (with the maker's own wording)
 function aboutHtml(s) {
   const link = s.url && /^https?:\/\//i.test(s.url) ? s.url : "";
   const tr = cur.translations && cur.translations[lang], linkText = (tr && tr.linkText) || s.linkText;
-  return (link ? `<a class="btn cta" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${linkText ? escapeHtml(linkText) + " ↗" : t(60, "Read more ↗")}</a>` : "") +
-    `<p class="license-note">${licenseLine(s, !!cur.image)}</p>`;
+  return (link ? `<a class="btn cta" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${linkText ? escapeHtml(linkText) + " ↗" : t(60, "Read more ↗")}</a>` : "");
 }
 function paperLink(s) {
   const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
@@ -2227,7 +2222,8 @@ function showWin(revisit) {
       <button class="link" id="winHome">${t(69, "All puzzles")}</button>
       <button class="link" id="reminderLink2">${t(28, "Weekly reminder")}</button>
       ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">${t(23, "Feedback &amp; CRIG news")}</a>` : ""}
-    </nav>`;
+    </nav>
+    <p class="license-note">${licenseLine(s)}</p>`;
   showScreen("result");
   window.scrollTo(0, 0);
   $("winHome").onclick = leavePuzzle;

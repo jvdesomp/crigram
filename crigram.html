@@ -900,6 +900,8 @@ nl: {
   191: "zonder hints",
   192: "1 hint",
   193: "{n} hints",
+  194: "met toestemming",
+  195: "eigen werk",
 },
 // </texts>
 };
@@ -2123,10 +2125,9 @@ function researchHtml(s) {
   if (s.journal) parts.push(escapeHtml(s.journal));
   const doi = (s.doi || "").replace(/^https?:\/\/(dx\.)?doi\.org\//i, "").trim();
   const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
-  const plUrl = { "CC BY-NC-SA 4.0": "by-nc-sa", "CC BY-NC 4.0": "by-nc", "CC BY-SA 4.0": "by-sa", "CC BY 4.0": "by" }[pl];
   const meta = [doi ? `doi:${escapeHtml(doi)}` : "",
-    s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? t(56, "figure license {license}", { license: escapeHtml(s.license) }) : "",
-    puzzleLicenseText(pl, plUrl),
+    s.license && !/^(to be checked|onbekend)$/i.test(s.license) ? t(56, "figure license {license}", { license: licenseName(s.license) }) : "",
+    t(58, "puzzle license {license}", { license: escapeHtml(pl) }),
   ].filter(Boolean).join(" · ");
   const link = paperLink(s);
   if (!parts.length && !meta && !link) return "";
@@ -2135,17 +2136,14 @@ function researchHtml(s) {
 }
 function licenseLine(s, withImage) {
   const pl = cur.puzzleLicense || "CC BY-NC-SA 4.0";
-  const plUrl = { "CC BY-NC-SA 4.0": "by-nc-sa", "CC BY-NC 4.0": "by-nc", "CC BY-SA 4.0": "by-sa", "CC BY 4.0": "by" }[pl];
   const own = /^(own work|to be checked|onbekend)$/i.test(s.license || "");
   return [
-    withImage && s.license && !own ? t(57, "image license {license}", { license: escapeHtml(s.license) }) : "",
-    puzzleLicenseText(pl, plUrl),
+    withImage && s.license && !own ? t(57, "image license {license}", { license: licenseName(s.license) }) : "",
+    t(58, "puzzle license {license}", { license: escapeHtml(pl) }),
   ].filter(Boolean).join(" · ");
 }
-function puzzleLicenseText(pl, plUrl) {
-  const license = plUrl ? `<a class="link" style="font-size:13px;padding:0" href="https://creativecommons.org/licenses/${plUrl}/4.0/" target="_blank" rel="noopener">${escapeHtml(pl)}</a>` : escapeHtml(pl);
-  return t(58, "puzzle license {license}", { license });
-}
+// licenses are plain text (no links: the result page has enough buttons); the maker's words translated, CC names as they are
+const licenseName = l => escapeHtml(({ "with permission": t(194, "with permission"), "own work": t(195, "own work") })[l] || l);
 // a free puzzle: its link as a clear button under the text (with the maker's own wording), the license as a footnote
 function aboutHtml(s) {
   const link = s.url && /^https?:\/\//i.test(s.url) ? s.url : "";

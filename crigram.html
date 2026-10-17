@@ -73,6 +73,8 @@
   .pcard small { color: var(--muted); font-size: 12px; }
   .tag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--blue-soft); color: var(--blue); margin-left: 4px; }
   .tag.done { background: rgba(31,138,76,.14); color: var(--ok); }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: -2px; }
+  .tags .tag { margin-left: 0; }
   .tag.special { background: #a54499; color: #fff; }
   .tag.ribbon { position: absolute; top: 16px; left: 16px; margin: 0; font-size: 12px; font-weight: 600; padding: 2px 9px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .tag.milestone { background: #fcb033; color: #1b2233; }
@@ -196,6 +198,9 @@
   .album-item .ph { width: 100%; aspect-ratio: 1; border-radius: 6px; background: var(--clue-bg); display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--muted); }
   .album-item b { font-size: 13px; line-height: 1.3; }
   .album-item small { color: var(--muted); font-size: 12px; }
+  .album-item .tag { margin-left: 0; align-self: flex-start; }
+  .album-stats-note { text-align: center; color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  .album-note { margin-top: 18px; font-size: 13px; color: var(--muted); }
   .stats-list { list-style: none; padding: 0; margin: 18px 0 0; }
   .stats-list li { display: flex; justify-content: space-between; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line); font-size: 14px; }
   .stats-list li span:last-child { color: var(--muted); text-align: right; white-space: nowrap; }
@@ -242,18 +247,14 @@
       <p id="emptyText">No puzzles loaded yet.</p>
       <button class="btn primary" id="openFileBtn">Open puzzle file</button>
     </div>
-    <div class="feedback-card" id="feedbackCard" hidden>
-      <div><b data-t="21">Enjoying CRIGram?</b><br><span data-t="22">Tell us what you think, or sign up for news from CRIG.</span></div>
-      <a class="btn primary" id="feedbackLink" href="#" target="_blank" rel="noopener" data-t="23">Feedback &amp; CRIG news</a>
-    </div>
     <div class="feedback-card" id="donateCard" hidden>
       <div style="flex:1 1 220px"><span data-t="24">The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</span></div>
       <a class="btn donate" id="donateLink" href="#" target="_blank" rel="noopener" data-t="25">♥ Donate</a>
     </div>
     <div class="links">
-      <button class="link" id="statsBtn" data-t="26">Your stats</button>
       <button class="link" id="howBtn" data-t="27">How to play</button>
       <button class="link" id="reminderLink" data-t="28">Weekly reminder</button>
+      <a class="link" id="feedbackLink" href="#" target="_blank" rel="noopener" hidden data-t="23">Feedback &amp; CRIG news</a>
       <button class="link" id="installBtn" hidden data-t="29">Install app</button>
       <!-- only for opening the game as a local file on a computer, when testing -->
       <button class="link" id="loadBtn" hidden>Load puzzle file</button>
@@ -313,18 +314,11 @@
     <div class="title"><b data-t="176">Your album</b><small id="albumMeta"></small></div>
   </div>
   <div class="wrap">
-    <div style="margin:-4px 0 10px"><button class="link" id="albumToggle" style="padding-left:0"></button></div>
+    <div id="albumStats"></div>
+    <div style="margin:4px 0 10px"><button class="link" id="albumToggle" style="padding-left:0"></button></div>
     <div class="album-grid" id="albumBody"></div>
+    <p class="album-note" id="albumNote"></p>
   </div>
-</section>
-<section id="stats" class="screen">
-  <div class="bar">
-    <button class="icon" id="statsBack" aria-label="Back to puzzles" data-ta="42">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <div class="title"><b data-t="102">Your stats</b><small data-t="103">stored on this device only</small></div>
-  </div>
-  <div class="wrap" id="statsBody"></div>
   <div class="wrap" id="resetRow" style="padding-top:0;text-align:center" hidden><button class="link" id="resetBtn" style="color:var(--muted)">Reset progress and stats</button></div>
 </section>
 <div class="sheet-bg" id="installBg">
@@ -740,12 +734,9 @@ nl: {
   18: "<b>{n} nieuwe puzzels</b> sedert je laatste bezoek.",
   19: "Je <b>reeks van {n} weken</b> staat op het spel: de puzzel van deze week staat open tot maandag 06:00.",
   20: "Sluiten",
-  21: "Vind je CRIGram leuk?",
-  22: "Laat ons weten wat je ervan vindt, of schrijf je in voor CRIG-nieuws.",
   23: "Feedback & CRIG-nieuws",
   24: "De puzzel is gratis, maar kankeronderzoek is duur. Speel je graag CRIGram? Overweeg dan om ons onderzoek te steunen.",
   25: "♥ Doneer",
-  26: "Jouw statistieken",
   27: "Hoe speel je?",
   28: "Wekelijkse herinnering",
   29: "Installeer de app",
@@ -768,11 +759,9 @@ nl: {
   47: "Uitzoomen",
   48: "Inzoomen",
   49: "Gereedschap",
-  50: "Opgelost!",
   51: "Jouw CRIGram",
   52: "De originele figuur",
   53: "De originele afbeelding",
-  54: "Puzzel: {title}",
   55: "Het onderzoek",
   56: "licentie figuur {license}",
   57: "licentie afbeelding {license}",
@@ -787,7 +776,6 @@ nl: {
   66: "Volgende puzzel",
   67: "Je hebt alle puzzels opgelost.",
   68: "Je hebt alle puzzels opgelost. De volgende komt eraan op {date}.",
-  69: "Alle puzzels",
   70: "Bekijk het rooster",
   71: "De opgeloste CRIGram",
   72: "Het detail van de originele figuur",
@@ -798,7 +786,6 @@ nl: {
   77: "Een doorsnee speler had <b>{range}</b> nodig; jij: {mine}.",
   78: "Een doorsnee speler had <b>{range}</b> nodig.",
   79: "<b>{p} %</b> loste hem op zonder hints.",
-  80: "(alle spelers, om de paar uur bijgewerkt)",
   81: "minder dan een minuut",
   82: "1 tot 2 minuten",
   83: "2 tot 5 minuten",
@@ -816,7 +803,6 @@ nl: {
   99: "Gekopieerd! Plak het in een bericht of post.",
   100: "Kopieer deze tekst:",
   101: "Jouw CRIGram-resultaatkaart",
-  102: "Jouw statistieken",
   103: "enkel bewaard op dit toestel",
   104: "opgelost",
   105: "zonder hints",
@@ -825,8 +811,6 @@ nl: {
   108: "week op rij",
   109: "weken op rij",
   110: "langste weken op rij",
-  111: "Puzzels",
-  112: "nog niet opgelost",
   113: "Tijden en hints komen van je eerste oplossing. Elke maandag om 06:00 (Brusselse tijd{local}) verschijnt een nieuwe puzzel, soms ook op speciale dagen. Je reeks telt de opeenvolgende weken waarin je de maandagpuzzel oploste voor de volgende verscheen. Speciale puzzels en de puzzels van de lanceerweek tellen niet mee.",
   114: "{time} bij jou",
   115: "{day} {time} bij jou",
@@ -948,7 +932,6 @@ function setLang(l) {
   showTogether(readJSON(TOGETHER_KEY, null));
   const screen = document.querySelector(".screen.active").id;
   if (screen === "album") renderAlbum();
-  if (screen === "stats") renderStats();
   if (cur) {
     $("pTitle").textContent = solved ? ptext(cur, "title") : puzzleLabel();
     updateMeta();
@@ -1118,10 +1101,13 @@ function fmtTime(s) {
   const m = Math.floor(s / 60), r = s % 60;
   return m + ":" + String(r).padStart(2, "0");
 }
-function stars(p) {
+function starText(p) {
   const n = p.difficulty && p.difficulty.stars ? p.difficulty.stars : 0;
   return n ? "★".repeat(n) + "☆".repeat(4 - n) : "";
 }
+// the stars carry the level (How to play explains them); the level word stays as a tooltip and for screen readers
+const stars = p => (p.difficulty && p.difficulty.label ? `<span title="${levelName(p.difficulty)}" aria-label="${levelName(p.difficulty)}">${starText(p)}</span>` : starText(p));
+const sizeStars = p => `${p.width} × ${p.height}` + (p.difficulty ? ` · ${stars(p)}` : "");
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
@@ -1205,10 +1191,9 @@ window.addEventListener("popstate", e => {
   try {
     if (!st) { depth = 0; closePuzzle(); if (!applyPendingUpdates()) { renderHome(); showScreen("home"); } return; }
     depth = st.depth || 1;
-    if (st.crigram === "album" || st.crigram === "stats") {
+    if (st.crigram === "album") {
       closePuzzle();
-      if (st.crigram === "album") { albumAll = !!st.all; renderAlbum(); showScreen("album"); }
-      else { renderStats(); showScreen("stats"); }
+      albumAll = !!st.all; renderAlbum(); showScreen("album");
     } else if (st.pid) {
       if (puzzleId() === st.pid) { if (st.crigram === "result" && solved) showWin(true); else { showScreen("play"); sizeBoard(); drawBoard(); } }
       else {
@@ -1303,8 +1288,8 @@ function renderHome() {
       (prog && prog.solved
         ? `<span class="tag done">✓ ${fmtTime(prog.time || 0)}${prog.hints ? ` · 💡 ${prog.hints}` : ""}</span>`
         : prog && prog.cells && /[12]/.test(prog.cells) ? `<span class="tag">${t(13, "in progress")}</span>` : "");
-    const level = p.difficulty && p.difficulty.label ? `${levelName(p.difficulty)} ` : "";
-    b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${p.width} × ${p.height} · ${level}${stars(p)}${status}</small>`);
+    // the badges on a row of their own, left-aligned with the size and stars
+    b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${sizeStars(p)}</small>` + (status ? `<span class="tags">${status}</span>` : ""));
     if (isSpecial(p)) b.insertAdjacentHTML("beforeend", `<span class="tag special ribbon">${t(14, "special")}</span>`);
     if (MILESTONES.includes(i + 1)) b.insertAdjacentHTML("beforeend", `<span class="tag milestone ribbon">${t(167, "🎉 {n}th puzzle", { n: i + 1 })}</span>`);
     b.onclick = () => openPuzzle(i);
@@ -1513,7 +1498,7 @@ function openFromLink() {
   if (!isNewcomer()) { openPuzzle(i); return; }
   const d = p.difficulty;
   $("linkTitle").textContent = t(10, "Puzzle {n}", { n: i + 1 });
-  $("linkSub").textContent = `${p.width} × ${p.height}` + (d ? ` · ${levelName(d)} ${stars(p)}` : "");
+  $("linkSub").innerHTML = sizeStars(p);
   $("linkGo").textContent = t(154, "Go to puzzle {n}", { n: i + 1 });
   $("linkPractice").onclick = () => { $("linkBg").classList.remove("show"); linkTarget = p.id; openPuzzle(-1); };
   $("linkGo").onclick = () => { $("linkBg").classList.remove("show"); openPuzzle(i); };
@@ -1537,7 +1522,7 @@ $("fileInput").onchange = e => {
 };
 $("resetBtn").onclick = () => {
   if (!confirm("Reset all progress and your stats?")) return;
-  progress = {}; saveProgress(); stats = {}; saveStats(); renderHome(); renderStats();
+  progress = {}; saveProgress(); stats = {}; saveStats(); renderHome(); renderAlbum();
 };
 $("howBtn").onclick = () => $("howBg").classList.add("show");
 $("practiceBtn").onclick = () => openPuzzle(-1);
@@ -1612,7 +1597,7 @@ window.addEventListener("blur", () => { if (cur) { pauseTimer(); persist(); } })
 function updateMeta() {
   if (!cur) return;
   const d = cur.difficulty;
-  $("pMeta").textContent = `${cur.width} × ${cur.height}` + (d ? ` · ${levelName(d)} ${stars(cur)}` : "");
+  $("pMeta").innerHTML = sizeStars(cur);
 }
 function persist() {
   if (!cur) return;
@@ -2191,8 +2176,8 @@ function showWin(revisit) {
   const s = cur.source || {};
   const pairClass = cur.image ? "compare" : "compare single";
   const layTitle = ptext(cur, "layTitle") || cur.headline || "", title = ptext(cur, "title");
-  $("rTitle").textContent = revisit ? title : t(50, "Solved!");
-  $("rMeta").textContent = `${cur.width} × ${cur.height}` + (cur.difficulty ? ` · ${levelName(cur.difficulty)} ${stars(cur)}` : "");
+  $("rTitle").textContent = title;   // the puzzle name sits in the top bar only, not again above the lay title
+  $("rMeta").innerHTML = sizeStars(cur);
   const isFree = cur.kind === "free";
   const research = isFree ? aboutHtml(s) : researchHtml(s);
   $("story").innerHTML = `
@@ -2201,8 +2186,7 @@ function showWin(revisit) {
       ${cur.image ? `<figure><img src="${cur.image}" alt="${isFree ? t(53, "The original image") : t(72, "The detail of the original figure")}"><figcaption>${isFree ? t(53, "The original image") : t(52, "The original figure")}</figcaption></figure>` : ""}
     </div>
     ${!isPractice() && MILESTONES.includes(curIndex + 1) ? `<div class="milestone-line">${t(168, "🎉 Our {n}th puzzle", { n: curIndex + 1 })}</div>` : ""}
-    ${layTitle ? `<div class="kicker">${t(54, "Puzzle: {title}", { title: escapeHtml(title) })}</div>` : ""}
-    <h2 style="margin-top:${layTitle ? 2 : 14}px">${escapeHtml(layTitle || title)}</h2>
+    <h2 style="margin-top:14px">${escapeHtml(layTitle || title)}</h2>
     <div class="summary">${paragraphs(ptext(cur, "laySummary") || cur.description)}</div>
     ${isFree ? research : research ? `<section class="box"><div class="box-title">${t(55, "The research")}</div>${research}</section>` : ""}
     <section class="box">
@@ -2219,14 +2203,12 @@ function showWin(revisit) {
       : `<p class="done-note">${nextRelease ? t(68, "You've solved all puzzles. The next one arrives {date}.", { date: whenText(nextRelease).abs }) : t(67, "You've solved all puzzles.")}</p>`}
     ${CONFIG.donateUrl && !isPractice() ? `<section class="box donate-box"><p>${t(24, "The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.")}</p><a class="btn donate" id="winDonate" href="${escapeHtml(donateUrl())}" target="_blank" rel="noopener">${t(25, "♥ Donate")}</a></section>` : ""}
     <nav class="footer-links">
-      <button class="link" id="winHome">${t(69, "All puzzles")}</button>
       <button class="link" id="reminderLink2">${t(28, "Weekly reminder")}</button>
       ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">${t(23, "Feedback &amp; CRIG news")}</a>` : ""}
     </nav>
     <p class="license-note">${licenseLine(s)}</p>`;
   showScreen("result");
   window.scrollTo(0, 0);
-  $("winHome").onclick = leavePuzzle;
   if ($("winDonate")) $("winDonate").addEventListener("click", () => track("donate", "Donate button clicked (result page)"));
   // the share image is prepared right away, so the share menu opens instantly on tap
   if (!isPractice()) {
@@ -2361,7 +2343,6 @@ async function showCommunity(p, myTime, myHints) {
     const hTotal = hints.reduce((a, b) => a + (b || 0), 0);
     if (hTotal >= 3) html += " " + t(79, "<b>{p} %</b> solved it without hints.", { p: Math.round(100 * (hints[0] || 0) / hTotal) });
   }
-  html += ` <small>${t(80, "(all players, updated every few hours)")}</small>`;
   box.innerHTML = html;
   box.hidden = false;
 }
@@ -2382,7 +2363,8 @@ function streaks() {
   return { current, longest, weekly: weekly.length };
 }
 const hintsText = h => (h === 0 || !h ? t(191, "no hints") : h === 1 ? t(192, "1 hint") : t(193, "{n} hints", { n: h }));
-function renderStats() {
+// your own numbers, at the top of the album (stored on this device only)
+function statsHtml() {
   const solvedIds = puzzles.filter(p => stats[p.id]).map(p => p.id);
   const recs = solvedIds.map(id => stats[id]);
   const times = recs.map(r => r.time).sort((a, b) => a - b);
@@ -2390,7 +2372,7 @@ function renderStats() {
   const noHints = recs.filter(r => !r.hints).length;
   const st = streaks();
   const tile = (v, l) => `<div class="tile"><b>${v}</b><small>${l}</small></div>`;
-  $("statsBody").innerHTML = `
+  return `
     <div class="tiles">
       ${tile(`${solvedIds.length}/${puzzles.length}`, t(104, "solved"))}
       ${tile(recs.length ? Math.round(100 * noHints / recs.length) + " %" : "–", t(105, "without hints"))}
@@ -2399,18 +2381,9 @@ function renderStats() {
       ${tile(st.current, st.current === 1 ? t(108, "week streak") : t(109, "weeks streak"))}
       ${tile(st.longest, t(110, "longest streak"))}
     </div>
-    <h3 class="section-title">${t(111, "Puzzles")}</h3>
-    <ul class="stats-list">
-      ${puzzles.map((p, i) => {
-        const r = stats[p.id];
-        if (!r) return `<li class="open"><span>${t(10, "Puzzle {n}", { n: i + 1 })}</span><span>${t(112, "not solved yet")}</span></li>`;
-        const date = new Date(r.first).toLocaleDateString(locale, { day: "numeric", month: "short" });
-        return `<li><span>${i + 1}. ${escapeHtml(ptext(p, "title"))}</span><span>${fmtTime(r.time)} · ${hintsText(r.hints)} · ${date}</span></li>`;
-      }).join("")}
-    </ul>
-    <p style="margin-top:14px;font-size:13px;color:var(--muted)">${t(113, "Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time{local}), or occasionally on special dates. Your streak counts the weeks in a row in which you solved the Monday puzzle before the next one came out. Special puzzles and the puzzles from the launch week don't count.", { local: localTimeSuffix() })}</p>`;
+    <p class="album-stats-note">${t(103, "stored on this device only")}</p>`;
 }
-$("statsBtn").onclick = () => { renderStats(); showScreen("stats"); };
+const albumNote = () => t(113, "Times and hints are from your first solve. A new puzzle appears every Monday at 06:00 (Brussels time{local}), or occasionally on special dates. Your streak counts the weeks in a row in which you solved the Monday puzzle before the next one came out. Special puzzles and the puzzles from the launch week don't count.", { local: localTimeSuffix() });
 
 // ---------- the research album: the figures a player has uncovered ----------
 function isSolvedP(p) { return !!(progress[p.id] && progress[p.id].solved); }   // a declaration, so renderHome can use it at any time
@@ -2449,6 +2422,8 @@ function questionImage() {
 function renderAlbum() {
   const n = puzzles.filter(isSolvedP).length, rest = puzzles.length - n;
   $("albumMeta").textContent = t(177, "{n} of {total} uncovered", { n, total: puzzles.length });
+  $("albumStats").innerHTML = statsHtml();
+  $("albumNote").textContent = albumNote();
   $("albumToggle").hidden = !rest;
   $("albumToggle").textContent = albumAll ? t(186, "Show only the uncovered figures")
     : rest === 1 ? t(189, "Also show the puzzle still to solve") : t(185, "Also show the {n} puzzles still to solve", { n: rest });
@@ -2460,9 +2435,10 @@ function renderAlbum() {
     b.className = "album-item";
     if (isSolvedP(p)) {
       const s = p.source || {}, meta = p.kind === "free" ? "" : [s.journal, s.year].filter(Boolean).join(", ");
-      b.innerHTML = `<img alt=""><b></b><small></small>`;
+      const r = stats[p.id];   // first solve: time and hints, as on the home screen
+      b.innerHTML = `<img alt=""><b></b><small></small>` + (r ? `<span class="tag done">✓ ${fmtTime(r.time || 0)}${r.hints ? ` · 💡 ${r.hints}` : ""}</span>` : "");
       b.querySelector("img").src = p.image || crigramImage(p);
-      b.querySelector("b").textContent = ptext(p, "title");   // the short puzzle title, as on the home screen and in the stats
+      b.querySelector("b").textContent = ptext(p, "title");   // the short puzzle title, as on the home screen
       b.querySelector("small").textContent = `#${i + 1}` + (meta ? ` · ${meta}` : "");
     } else {
       b.innerHTML = `<img alt="" src="${questionImage()}"><b>${t(10, "Puzzle {n}", { n: i + 1 })}</b><small>${t(178, "not uncovered yet")}</small>`;
@@ -2525,7 +2501,6 @@ async function refreshTogether(now, live) {
   writeJSON(TOGETHER_KEY, t);
   showTogether(t);
 }
-$("statsBack").onclick = () => { renderHome(); showScreen("home"); };
 
 // ---------- installing as an app ----------
 let installEvent = null;
@@ -2562,7 +2537,7 @@ $("installBtn").onclick = async () => {
 if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {}));
 }
-if (CONFIG.feedbackUrl) { $("feedbackLink").href = CONFIG.feedbackUrl; $("feedbackCard").hidden = false; }
+if (CONFIG.feedbackUrl) { $("feedbackLink").href = CONFIG.feedbackUrl; $("feedbackLink").hidden = false; }
 $("feedbackLink").addEventListener("click", () => track("feedback", "Feedback form opened"));
 if (CONFIG.donateUrl) { $("donateLink").href = CONFIG.donateUrl; $("donateCard").hidden = false; }
 $("donateLink").addEventListener("click", () => track("donate", "Donate button clicked (home)"));

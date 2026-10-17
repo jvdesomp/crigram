@@ -796,10 +796,16 @@ nl: {
   74: "Al door {n} spelers opgelost: je bent een van de eersten!",
   75: "Je bent een van de allereerste spelers die deze puzzel oplost!",
   76: "Opgelost door <b>{n}</b> spelers.",
-  77: "De meesten hadden <b>{range}</b> nodig; jij: {mine}.",
-  78: "De meesten hadden <b>{range}</b> nodig.",
+  77: "Een doorsnee speler had <b>{range}</b> nodig; jij: {mine}.",
+  78: "Een doorsnee speler had <b>{range}</b> nodig.",
   79: "<b>{p} %</b> loste hem op zonder hints.",
   80: "(alle spelers, om de paar uur bijgewerkt)",
+  81: "minder dan een minuut",
+  82: "1 tot 2 minuten",
+  83: "2 tot 5 minuten",
+  84: "5 tot 10 minuten",
+  85: "10 tot 20 minuten",
+  86: "meer dan 20 minuten",
   90: "#{n} gekraakt",
   92: "Lukt het jou ook?",
   93: "Deel je resultaat",
@@ -2317,7 +2323,9 @@ const BUCKETS = [
   ["under-1-min", 81, "less than a minute"], ["1-2-min", 82, "1 to 2 minutes"], ["2-5-min", 83, "2 to 5 minutes"],
   ["5-10-min", 84, "5 to 10 minutes"], ["10-20-min", 85, "10 to 20 minutes"], ["over-20-min", 86, "more than 20 minutes"],
 ];
-const bucketText = b => t(b[1], b[2]);
+// written out, so translations/build-texts.py sees every text number
+const bucketText = b => ({ 81: t(81, "less than a minute"), 82: t(82, "1 to 2 minutes"), 83: t(83, "2 to 5 minutes"),
+  84: t(84, "5 to 10 minutes"), 85: t(85, "10 to 20 minutes"), 86: t(86, "more than 20 minutes") })[b[1]];
 async function gcCount(path) {
   // returns a number, 0 when nobody has done it yet, or null when the counts cannot be read
   for (const p of [path, "/" + path]) {
@@ -2353,8 +2361,8 @@ async function showCommunity(p, myTime, myHints) {
     if (tTotal >= 3) {
       let acc = 0, mid = 0;
       for (let i = 0; i < times.length; i++) { acc += times[i] || 0; if (acc >= tTotal / 2) { mid = i; break; } }
-      html += " " + (myBucket ? t(77, "Most needed <b>{range}</b>; you: {mine}.", { range: bucketText(BUCKETS[mid]), mine: bucketText(myBucket) })
-        : t(78, "Most needed <b>{range}</b>.", { range: bucketText(BUCKETS[mid]) }));
+      html += " " + (myBucket ? t(77, "A typical player needed <b>{range}</b>; you: {mine}.", { range: bucketText(BUCKETS[mid]), mine: bucketText(myBucket) })
+        : t(78, "A typical player needed <b>{range}</b>.", { range: bucketText(BUCKETS[mid]) }));
     }
     const hTotal = hints.reduce((a, b) => a + (b || 0), 0);
     if (hTotal >= 3) html += " " + t(79, "<b>{p} %</b> solved it without hints.", { p: Math.round(100 * (hints[0] || 0) / hTotal) });

@@ -511,10 +511,11 @@ function propagate(st, W, H, rows, cols) {
   return true;
 }
 // ---------- estimated solving time ----------
-// Calibrated on real solve times (October 2026: barcode decoding ≈ 5 min, ferroptosis ≈ 10 min, CRIG walk ≈ 16 min).
-// Recalibrate both numbers when median solve times of more puzzles are known.
-const TIME_PER_SEARCH = 0.057;   // minutes per row or column a player looks at before finding one that gives progress
-const TIME_PER_BIT = 0.32;       // minutes per bit of reasoning in rows that still allow several fillings
+// Refitted on 18 October 2026 (least squares, no intercept) on the median of the exact solve minutes of puzzles 1 to 4
+// (barcodes 3.5, DC vaccine 8.5, CRIG walk 11.5, Dag tegen Kanker 6.5 min; 13 to 42 solves each). Before: 0.057 and 0.32.
+// Refit again once 5 puzzles have about 20 solves each, in the game, the maker and the dashboard.
+const TIME_PER_SEARCH = 0.033;   // minutes per row or column a player looks at before finding one that gives progress
+const TIME_PER_BIT = 0.29;       // minutes per bit of reasoning in rows that still allow several fillings
 const DIFFICULTY_LEVELS = [[5, "easy", 1], [10, "medium", 2], [20, "hard", 3], [Infinity, "expert", 4]];
 function estimateDifficulty(W, H, rows, cols) {
   const lineOf = (st, idx) => {

@@ -2303,9 +2303,15 @@ const BUCKETS = [
 // written out, so translations/build-texts.py sees every text number
 const bucketText = b => ({ 81: t(81, "less than a minute"), 82: t(82, "1 to 2 minutes"), 83: t(83, "2 to 5 minutes"),
   84: t(84, "5 to 10 minutes"), 85: t(85, "10 to 20 minutes"), 86: t(86, "more than 20 minutes") })[b[1]];
-// GoatCounter serves a count asked without dates from a copy that can be many hours old (7 hours seen on 18 October
-// 2026); with a date range it counts afresh. The range runs from before the launch to tomorrow, so it changes daily.
-const countRange = () => `start=2026-10-01&end=${addDays(brusselsDate(Date.now()), 1)}`;   // worked out per request: an app can stay open for days
+// GoatCounter keeps a computed count for hours, separately for every exact question (path plus start and end; other
+// parameters are ignored), so a fixed question can stay hours behind (7 hours seen on 18 October 2026). The question
+// therefore changes every 15 minutes: the end is tomorrow, and the start moves one day per quarter of an hour through
+// July to early October 2026, always before the launch (11 October), so the counts themselves stay the same.
+function countRange() {
+  const now = Date.now(), today = brusselsDate(now), p = tzParts(now, RELEASE_TZ);
+  const slot = Math.floor((+p.hour * 60 + +p.minute) / 15);   // 0 … 95
+  return `start=${addDays("2026-07-01", slot)}&end=${addDays(today, 1)}`;
+}
 async function gcCount(path) {
   // returns a number, 0 when nobody has done it yet, or null when the counts cannot be read
   for (const p of [path, "/" + path]) {

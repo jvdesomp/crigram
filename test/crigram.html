@@ -2410,7 +2410,7 @@ let questionCache = null;
 function questionImage() {
   const css = getComputedStyle(document.documentElement), dark = css.getPropertyValue("--clue-bg").trim();
   if (questionCache && questionCache.bg === dark) return questionCache.url;
-  const Q = [".XXX.", "X...X", "....X", "...X.", "..X..", "..X..", ".....", "..X.."], SEQ = [0, 3, 4, 1, 6, 2, 5];
+  const Q = [".XXX.", "X...X", "....X", "...X.", "..X..", "..X..", "..X..", ".....", "..X.."], SEQ = [0, 3, 4, 1, 6, 2, 5];
   const cols = 11, rows = 11, g = 24, c = document.createElement("canvas");   // square, like the figures
   c.width = cols * g + 1; c.height = rows * g + 1;
   const x = c.getContext("2d");

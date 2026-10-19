@@ -1058,12 +1058,23 @@ let stats = readJSON(STATS_KEY, {});
 function saveStats() { writeJSON(STATS_KEY, stats); }
 
 // ---------- anonymous counting (GoatCounter, only when configured) ----------
+// GoatCounter accepts at most 4 requests per second from one address and silently drops the rest,
+// so events go out one by one, about 3 per second (a solve sends 5 at once)
 const pendingEvents = [];
-function track(path, title) {
+let eventTimer = 0;
+function track(path, title) { trackAll([[path, title]]); }
+// several events in this order; urgent ones go before anything still waiting
+function trackAll(events, urgent) {
   if (!CONFIG.goatcounter || IS_TEST) return;
+  if (urgent) pendingEvents.unshift(...events); else pendingEvents.push(...events);
+  sendEvents();
+}
+function sendEvents() {
   const gc = window.goatcounter;
-  if (gc && gc.count) gc.count({ path, title: title || path, event: true });
-  else pendingEvents.push([path, title]);
+  if (eventTimer || !pendingEvents.length || !(gc && gc.count)) return;
+  const [path, title] = pendingEvents.shift();
+  gc.count({ path, title: title || path, event: true });
+  eventTimer = setTimeout(() => { eventTimer = 0; sendEvents(); }, 350);
 }
 function setupCounting() {
   if (IS_TEST) {
@@ -1075,7 +1086,7 @@ function setupCounting() {
   s.async = true;
   s.src = "https://gc.zgo.at/count.js";
   s.dataset.goatcounter = `https://${CONFIG.goatcounter}.goatcounter.com/count`;
-  s.onload = () => { while (pendingEvents.length) track(...pendingEvents.shift()); };
+  s.onload = () => { eventTimer = setTimeout(() => { eventTimer = 0; sendEvents(); }, 350); };   // after the page view count.js sends itself
   document.head.appendChild(s);
   $("privacyNote").hidden = false;
 }
@@ -2034,13 +2045,16 @@ function recordSolve() {
   const n = curIndex + 1;
   // the puzzle name is only known after solving; it goes into the titles, which only show in the private dashboard
   const name = cur.title ? ` · ${cur.title}` : "";
-  track(`solved/${cur.id}`, `Puzzle ${n} solved${name}`);
-  track(`solved/${cur.id}/time-${timeBucket(time)}`, `Puzzle ${n} solve time${name}`);
-  track(`solved/${cur.id}/hints-${hints === 0 ? "0" : hints === 1 ? "1" : "2-or-more"}`, `Puzzle ${n} hints used${name}`);
-  // exact values since 14 October 2026: whole minutes per device type, and the exact number of hints
-  const m = Math.floor(time / 60), mins = m < 60 ? String(m) : "60plus";
-  track(`solved/${cur.id}/min/${DEVICE}/${mins}`, `Puzzle ${n} solved in ${m < 60 ? m : "60+"} min on ${DEVICE}${name}`);
-  track(`solved/${cur.id}/hints/${hints < 10 ? hints : "10plus"}`, `Puzzle ${n} solved with ${hints < 10 ? hints : "10+"} hint${hints === 1 ? "" : "s"}${name}`);
+  // most important first, in case the player leaves before all are sent (one goes out every 350 ms):
+  // the exact values in one event (device type, whole minutes, exact number of hints; from 14 to 19 October 2026
+  // these were two events, min/<device>/<m> and hints/<n>), then the solve itself, then the ranges the in-game community line reads
+  const m = Math.floor(time / 60), mins = m < 60 ? String(m) : "60plus", hn = hints < 10 ? String(hints) : "10plus";
+  trackAll([
+    [`solved/${cur.id}/exact/${DEVICE}/${mins}/${hn}`, `Puzzle ${n} solved in ${m < 60 ? m : "60+"} min with ${hints < 10 ? hints : "10+"} hint${hints === 1 ? "" : "s"} on ${DEVICE}${name}`],
+    [`solved/${cur.id}`, `Puzzle ${n} solved${name}`],
+    [`solved/${cur.id}/hints-${hints === 0 ? "0" : hints === 1 ? "1" : "2-or-more"}`, `Puzzle ${n} hints used${name}`],
+    [`solved/${cur.id}/time-${timeBucket(time)}`, `Puzzle ${n} solve time${name}`],
+  ], true);
 }
 function bumpHints() {
   const prev = progress[cur.id] || {};

@@ -147,6 +147,12 @@
   .paper-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; text-decoration: none; }
   #boardWrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 10px 8px; overflow: auto; }
   #board { touch-action: none; display: block; }
+  /* practice puzzle: a tip about one line, between the grid and the tool bar */
+  .tip-box { flex: none; box-sizing: border-box; width: calc(100% - 24px); max-width: 560px; margin: 0 auto 10px; padding: 10px 14px 12px; border-radius: 12px; background: var(--blue-soft); font-size: 14px; line-height: 1.4; -webkit-user-select: text; user-select: text; }
+  .tip-box p { margin: 4px 0 8px; }
+  .tip-box .tip-ask { font-weight: 600; margin-bottom: 8px; }
+  .tip-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tip-actions .btn { flex: 1 1 140px; }
   .tools { display: flex; gap: 10px; justify-content: center; align-items: center; padding: 10px 12px calc(14px + env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); }
   .mode { display: flex; background: var(--clue-bg); border-radius: 12px; padding: 4px; }
   .mode button { border: 0; background: none; padding: 8px 18px; border-radius: 9px; display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 15px; color: var(--muted); }
@@ -165,6 +171,14 @@
   .sheet img { width: 100%; border-radius: 10px; margin: 6px 0 10px; background: #fff; }
   .sheet .actions { display: flex; gap: 10px; margin-top: 16px; }
   .sheet .actions .btn { flex: 1; }
+  .sheet h3 { margin: 14px 0 6px; font-size: 16px; }
+  .install-steps { list-style: none; padding: 0; margin: 6px 0; counter-reset: step; }
+  .install-steps li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); counter-increment: step; }
+  .install-steps li:first-child { border-top: 0; }
+  .install-steps li::before { content: counter(step); flex: none; width: 22px; height: 22px; margin-top: 4px; border-radius: 50%; background: var(--blue); color: #fff; font: 700 13px/22px system-ui, sans-serif; text-align: center; }
+  .install-ico { flex: none; width: 30px; height: 30px; color: var(--blue); }
+  .install-ico svg { width: 100%; height: 100%; }
+  .install-note { color: var(--muted); font-size: 14px; }
   .rules li { margin-bottom: 6px; }
   .example { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; }
   .ex-clue { background: var(--clue-bg); border-radius: 4px; padding: 3px 8px; font-weight: 700; font-size: 14px; white-space: nowrap; }
@@ -191,7 +205,7 @@
   .together .head { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
   .together .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .together .scores b { display: block; font-size: 26px; font-weight: 800; line-height: 1.1; color: var(--blue); font-variant-numeric: tabular-nums; }
-  .together .scores small { display: block; font-size: 12px; line-height: 1.3; color: var(--muted); }
+  .together .scores small { display: block; font-size: 12px; line-height: 1.3; color: var(--muted); overflow-wrap: break-word; -webkit-hyphens: manual; hyphens: manual; }
   .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .album-item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px; text-align: left; display: flex; flex-direction: column; gap: 6px; font: inherit; color: var(--ink); cursor: pointer; }
   .album-item img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 6px; background: #fff; display: block; }
@@ -283,6 +297,15 @@
     </button>
   </div>
   <div id="boardWrap"><canvas id="board"></canvas></div>
+  <div class="tip-box" id="tipBox" role="status" hidden>
+    <b data-t="216">Tip</b>
+    <p id="tipText"></p>
+    <p class="tip-ask" data-t="224">Shall I fill in a cell for you?</p>
+    <div class="tip-actions">
+      <button class="btn slim primary" id="tipYes" data-t="225">Yes, fill in a cell</button>
+      <button class="btn slim" id="tipNo" data-t="226">No, I'll try myself</button>
+    </div>
+  </div>
   <div class="tools">
     <button class="icon zoom" id="zoomOut" aria-label="Zoom out" data-ta="47">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14"/></svg>
@@ -324,9 +347,47 @@
 <div class="sheet-bg" id="installBg">
   <div class="sheet">
     <h2 data-t="116">Install CRIGram</h2>
-    <div class="sub" data-t="117">Put CRIGram on your home screen. It opens full screen and also works offline.</div>
-    <p data-t="118"><b>iPhone or iPad (Safari):</b> tap the Share button <span aria-hidden="true">⎋</span> at the bottom of the screen, then <b>Add to Home Screen</b>.</p>
-    <p data-t="119"><b>Android (Chrome):</b> tap the menu <b>⋮</b> at the top right, then <b>Install app</b> or <b>Add to Home screen</b>.</p>
+    <div class="sub" id="installSub" data-t="117">Put CRIGram on your home screen. It opens full screen and also works offline.</div>
+    <!-- only the part for the player's device is shown (installHelp); a computer without an install offer sees both -->
+    <div id="installInApp" hidden>
+      <h3 data-t="205">Open CRIGram in your browser first</h3>
+      <p id="installInAppWhy"></p>
+      <p id="installInAppHow"></p>
+      <button class="btn" id="installCopy" data-t="208">Copy link</button>
+    </div>
+    <div id="installIos" hidden>
+      <h3 class="install-os" data-t="203">On iPhone or iPad</h3>
+      <ol class="install-steps">
+        <!-- one text for iOS 26 (⋯ next to the address bar) and iOS 27 (three stripes in it); the icon follows the version -->
+        <li><span class="install-ico" id="installIcoDots" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="7.5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="16.5" cy="12" r="1.5" fill="currentColor"/></svg></span>
+          <span class="install-ico" id="installIcoStripes" aria-hidden="true" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 8h12M6 12h12M6 16h12"/></svg></span>
+          <span id="installIosSafari" data-t="196">Tap <b>⋯</b> next to the address bar or on <b>three horizontal stripes</b> in the address bar, then <b>Share</b>. If you see the Share button itself, tap that.</span>
+          <span id="installIosOther" data-t="200" hidden>Tap the <b>Share</b> button in the address bar or in the menu.</span></li>
+        <li><span class="install-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span>
+          <span data-t="197">Tap <b>View More</b> (or scroll down), then <b>Add to Home Screen</b>.</span></li>
+        <li><span class="install-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+          <span data-t="198">Tap <b>Add</b> at the top right. If you see <b>Open as Web App</b>, leave it on.</span></li>
+      </ol>
+      <p class="install-note" id="installIosNote" data-t="199" hidden>The app starts with an empty album: on iPhone and iPad an installed app keeps its own progress, separate from Safari.</p>
+    </div>
+    <div id="installAndroid" hidden>
+      <h3 class="install-os" data-t="204">On Android</h3>
+      <ol class="install-steps">
+        <li><span class="install-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5.5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="18.5" r="1.8"/></svg></span>
+          <span data-t="201">Tap the menu <b>⋮</b> at the top right.</span></li>
+        <li><span class="install-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span>
+          <span data-t="202">Tap <b>Install app</b> or <b>Add to Home screen</b>, then <b>Install</b>.</span></li>
+      </ol>
+    </div>
+    <div id="installMac" hidden>
+      <ol class="install-steps">
+        <li><span class="install-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M3 8.5h18M6.5 6.2h.01M9 6.2h.01"/></svg></span>
+          <span data-t="211">In the menu bar, choose <b>File</b> › <b>Add to Dock</b>.</span></li>
+        <li><span class="install-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+          <span data-t="212">Click <b>Add</b>. CRIGram then opens from the Dock in its own window.</span></li>
+      </ol>
+      <p class="install-note" id="installMacNote" data-t="213" hidden>The app starts with an empty album: an app in the Dock keeps its own progress, separate from Safari.</p>
+    </div>
     <div class="actions"><button class="btn primary" data-close data-t="120">Got it</button></div>
   </div>
 </div>
@@ -733,7 +794,6 @@ nl: {
   16: "We hebben je gemist! <b>{n} puzzels</b> wachten op jou.",
   17: "Nieuw sedert je laatste bezoek: <b>puzzel {n}</b>.",
   18: "<b>{n} nieuwe puzzels</b> sedert je laatste bezoek.",
-  19: "Je <b>reeks van {n} weken</b> staat op het spel: de puzzel van deze week staat open tot maandag 06:00.",
   20: "Sluiten",
   23: "Feedback & CRIG-nieuws",
   24: "De puzzel is gratis, maar kankeronderzoek is duur. Speel je graag CRIGram? Overweeg dan om ons onderzoek te steunen.",
@@ -817,8 +877,6 @@ nl: {
   115: "{day} {time} bij jou",
   116: "Installeer CRIGram",
   117: "Zet CRIGram op je beginscherm. Het opent dan schermvullend en werkt ook offline.",
-  118: "<b>iPhone of iPad (Safari):</b> tik onderaan op de deelknop ⎋ en kies dan <b>Zet op beginscherm</b>.",
-  119: "<b>Android (Chrome):</b> tik rechtsboven op het menu <b>⋮</b> en kies dan <b>App installeren</b> of <b>Toevoegen aan startscherm</b>.",
   120: "Begrepen",
   121: "Wekelijkse herinnering",
   122: "Krijg elke maandag om 08:00 een herinnering in je agenda, wanneer de nieuwe puzzel klaarstaat. Je kunt het tijdstip achteraf in je agenda aanpassen.",
@@ -873,12 +931,12 @@ nl: {
   179: "Alle spelers tot nu toe",
   180: "puzzels opgelost",
   181: "uren gepuzzeld",
-  182: "kankeronderzoeksartikels in de kijker",
+  182: "kanker­onderzoeks­artikels in de kijker",
   184: "Alle {n} puzzels staan in je album ›",
   185: "Toon ook de {n} puzzels die je nog moet oplossen",
   186: "Toon alleen de ontdekte figuren",
   187: "minuten gepuzzeld",
-  188: "kankeronderzoeksartikel in de kijker",
+  188: "kanker­onderzoeks­artikel in de kijker",
   189: "Toon ook de puzzel die je nog moet oplossen",
   190: "Voorbeeld: een rij met de getallen 1 4 1",
   191: "zonder hints",
@@ -886,6 +944,38 @@ nl: {
   193: "{n} hints",
   194: "met toestemming",
   195: "eigen werk",
+  196: "Tik op <b>...</b> naast de adresbalk of op de <b>3 streepjes</b> in de adresbalk en dan op <b>Deel</b>. Zie je de deelknop zelf al staan? Tik dan daarop.",
+  197: "Tik op <b>Toon meer</b> (of scrol omlaag) en dan op <b>Zet op beginscherm</b>.",
+  198: "Tik rechtsboven op <b>Voeg toe</b>. Zie je <b>Open als webapp</b> staan? Laat dat dan aan.",
+  199: "De app begint met een leeg album: op iPhone en iPad houdt een geïnstalleerde app zijn eigen voortgang bij, los van Safari.",
+  200: "Tik op de deelknop in de adresbalk of in het menu.",
+  201: "Tik rechtsboven op het menu <b>⋮</b>.",
+  202: "Tik op <b>App installeren</b> of <b>Toevoegen aan startscherm</b> en dan op <b>Installeren</b>.",
+  203: "Op iPhone of iPad",
+  204: "Op Android",
+  205: "Open CRIGram eerst in je browser",
+  206: "Je opende CRIGram in {app}. De ingebouwde browser van die app kan CRIGram niet op je beginscherm zetten, en wat je daar oplost, blijft in die app.",
+  207: "Tik in {app} op het menu (<b>⋯</b> of <b>⋮</b>) en kies <b>Open in {browser}</b> of <b>Open in browser</b>. Of kopieer de link hieronder en plak die in {browser}.",
+  208: "Kopieer link",
+  209: "een andere app",
+  210: "Link gekopieerd. Plak hem in {browser}.",
+  211: "Kies in de menubalk <b>Archief</b> › <b>Voeg toe aan Dock</b>.",
+  212: "Klik op <b>Voeg toe</b>. CRIGram opent dan vanuit het Dock in een eigen venster.",
+  213: "De app begint met een leeg album: een app in het Dock houdt zijn eigen voortgang bij, los van Safari.",
+  214: "Zet CRIGram in je Dock. Het opent dan in een eigen venster en werkt ook offline.",
+  215: "Je <b>reeks van {n} weken</b> staat op het spel: de puzzel van deze week staat open tot maandag 06:00 (Brusselse tijd{local}).",
+  216: "Tip",
+  217: "Kijk naar de kolom met <b>2 2</b>. Twee blokken moeten altijd gescheiden zijn door minstens één leeg vakje, en deze kolom heeft maar 5 vakjes. Er is dus maar één oplossing: bovenaan een blok van 2, dan een leeg vakje, en dan nog een blok van 2.",
+  218: "Kijk naar de rij met <b>4</b>. Ze heeft maar 5 vakjes, dus waar het blok van 4 ook begint, het bevat zeker vakjes 2, 3 en 4. Die kan je dus al inkleuren. Of vakje 1 of vakje 5 gekleurd moet zijn, weet je nog niet.",
+  219: "Kijk naar de kolom met <b>3</b>. Net als bij de rij met 4: het blok van 3 kan bovenaan starten (vakjes 1 tot 3) of onderaan eindigen (vakjes 3 tot 5), de twee meest extreme mogelijkheden. In beide gevallen is vakje 3 gekleurd. De rest van het blok kan je op basis van enkel deze kolom nog niet met zekerheid inkleuren.",
+  220: "Alle blokken van deze rij zijn al gekleurd, dus de andere vakjes blijven leeg. Duid ze aan met <b>Leeg</b>: dat helpt je bij de kolommen.",
+  221: "Alle blokken van deze kolom zijn al gekleurd, dus de andere vakjes blijven leeg. Duid ze aan met <b>Leeg</b>: dat helpt je bij de rijen.",
+  222: "Kijk naar deze rij. Vergelijk de cijfers met de vakjes die je al kent (gekleurd of leeg): sommige vakjes kunnen maar op één manier.",
+  223: "Kijk naar deze kolom. Vergelijk de cijfers met de vakjes die je al kent (gekleurd of leeg): sommige vakjes kunnen maar op één manier.",
+  224: "Zal ik een vakje voor je invullen?",
+  225: "Ja, vul een vakje in",
+  226: "Nee, ik probeer zelf",
+  227: "Goed zo!",
 },
 // </texts>
 };
@@ -1398,7 +1488,7 @@ function pickNotice(prevVisit) {
   const wd = weekday(brusselsDate(now));
   if (last && !isSolved(last) && now < releaseTime(last) + 7 * DAY && (wd === 5 || wd === 6 || wd === 0)) {
     const st = streaks();
-    if (st.current >= 1) return t(19, "Your <b>{n}-week streak</b> is on the line: this week's puzzle is open until Monday 06:00.", { n: st.current });
+    if (st.current >= 1) return t(215, "Your <b>{n}-week streak</b> is on the line: this week's puzzle is open until Monday 06:00 (Brussels time{local}).", { n: st.current, local: localTimeSuffix() });
   }
   return null;
 }
@@ -1574,6 +1664,7 @@ function openPuzzle(i) {
   startedAt = 0;
   undoStack = [];
   focusCell = -1; flash = null;
+  tip = null; $("tipBox").hidden = true;
   revealAlpha = solved ? 1 : 0;
   colorWave = 1;
   revealImg = null;
@@ -1619,6 +1710,7 @@ function persist() {
 }
 function leavePuzzle() {
   pauseTimer(); persist();
+  closeTip();
   clearInterval(timerId);
   cur = null;
   if (applyPendingUpdates()) return;
@@ -1749,6 +1841,7 @@ function drawBoard() {
   ctx.save();
   ctx.beginPath(); ctx.rect(0, top, left, vh); ctx.clip();
   if (fr >= 0 && !solved) { ctx.fillStyle = C.focus; ctx.fillRect(0, top + fr * cs - oy, left, cs); }
+  if (tip && tip.idx < H) { ctx.fillStyle = C.blue; ctx.globalAlpha = .22; ctx.fillRect(0, top + tip.idx * cs - oy, left, cs); ctx.globalAlpha = 1; }
   cur.rows.forEach((c, r) => {
     const y = top + r * cs - oy + cs / 2 + 1;
     if (y < top - cs || y > top + vh + cs) return;
@@ -1761,6 +1854,7 @@ function drawBoard() {
   ctx.save();
   ctx.beginPath(); ctx.rect(left, 0, vw, top); ctx.clip();
   if (fc >= 0 && !solved) { ctx.fillStyle = C.focus; ctx.fillRect(left + fc * cs - ox, 0, cs, top); }
+  if (tip && tip.idx >= H) { ctx.fillStyle = C.blue; ctx.globalAlpha = .22; ctx.fillRect(left + (tip.idx - H) * cs - ox, 0, cs, top); ctx.globalAlpha = 1; }
   cur.cols.forEach((c, col) => {
     const x = left + col * cs - ox + cs / 2;
     if (x < left - cs || x > left + vw + cs) return;
@@ -1800,6 +1894,11 @@ function drawBoard() {
   ctx.moveTo(W * cs + .5, 0); ctx.lineTo(W * cs + .5, H * cs);
   ctx.moveTo(0, H * cs + .5); ctx.lineTo(W * cs, H * cs + .5);
   ctx.stroke();
+  if (tip) {
+    ctx.strokeStyle = C.blue; ctx.lineWidth = 3;
+    if (tip.idx < H) ctx.strokeRect(1.5, tip.idx * cs + 1.5, W * cs - 2, cs - 2);
+    else ctx.strokeRect((tip.idx - H) * cs + 1.5, 1.5, cs - 2, H * cs - 2);
+  }
   if (revealAlpha > 0 && revealImg && revealImg.complete && revealImg.naturalWidth) {
     ctx.globalAlpha = revealAlpha;
     ctx.fillStyle = "#fff";
@@ -1934,6 +2033,7 @@ function endStroke() {
   stroke = null;
   drawBoard();
   persist();
+  checkTip();
   checkWin();
 }
 function pointerEnd(e) {
@@ -1956,12 +2056,14 @@ function undo() {
   if (!cur || solved || !undoStack.length) return;
   cells = undoStack.pop();
   persist(); drawBoard();
+  checkTip();
 }
 $("undoBtn").onclick = undo;
 $("infoBtn").onclick = () => { if (cur && solved) showWin(true); };
 $("restartBtn").onclick = () => {
   if (!cur) return;
   if (!confirm(t(37, "Restart this puzzle?"))) return;
+  closeTip();
   cells.fill(0); undoStack = []; solved = false; elapsed = 0; startedAt = 0; revealAlpha = 0;
   progress[cur.id] = { cells: Array.from(cells).join(""), time: 0, solved: false, hints: 0 };
   saveProgress();
@@ -1977,17 +2079,44 @@ function showFlash(set, color) {
   drawBoard();
   setTimeout(drawBoard, 1650);
 }
-$("hintBtn").onclick = () => {
-  if (!cur || solved) return;
+// the cells of line idx (rows first, then columns), in order
+function lineCells(idx) {
+  const W = cur.width, H = cur.height, at = [];
+  if (idx < H) for (let x = 0; x < W; x++) at.push(idx * W + x);
+  else for (let y = 0; y < H; y++) at.push(y * W + idx - H);
+  return at;
+}
+// the easiest line that yields a new cell, like a player would: { at, gains, fills, row, idx } or null
+function easiestLine() {
   const W = cur.width, H = cur.height;
+  let best = null;
+  for (let idx = 0; idx < W + H; idx++) {
+    const at = lineCells(idx), line = Int8Array.from(at, i => cells[i] === 1 ? 1 : cells[i] === 2 ? 0 : -1);
+    const out = solveLine(line, idx < H ? cur.rows[idx] : cur.cols[idx - H]);
+    if (!out) continue;
+    // crosses are not needed to win, so prefer lines that reveal a cell to fill
+    const fills = at.filter((i, x) => line[x] === -1 && out.res[x] === 1);
+    const gains = fills.length ? fills : at.filter((i, x) => line[x] === -1 && out.res[x] === 0);
+    if (!gains.length) continue;
+    const rank = (fills.length ? 0 : 1e12) + out.count;
+    if (!best || rank < best.rank) best = { rank, gains, fills: fills.length > 0, at, row: idx < H, idx };
+  }
+  return best;
+}
+function wrongCells() {
   const wrong = [];
-  for (let i = 0; i < W * H; i++) {
+  for (let i = 0; i < cur.width * cur.height; i++) {
     if ((cells[i] === 1 && !cur.sol[i]) || (cells[i] === 2 && cur.sol[i])) wrong.push(i);
   }
-  undoStack.push(cells.slice());
-  startTimer();
-  bumpHints();
+  return wrong;
+}
+$("hintBtn").onclick = () => {
+  if (!cur || solved) return;
+  const wrong = wrongCells();
   if (wrong.length) {
+    undoStack.push(cells.slice());
+    startTimer();
+    bumpHints();
     const i = wrong[Math.floor(Math.random() * wrong.length)];
     cells[i] = 0;
     focusCell = i;
@@ -1996,35 +2125,91 @@ $("hintBtn").onclick = () => {
     persist();
     return;
   }
-  // find the easiest line that yields a new cell, like a player would
-  const st = new Int8Array(W * H);
-  for (let i = 0; i < W * H; i++) st[i] = cells[i] === 1 ? 1 : cells[i] === 2 ? 0 : -1;
-  let best = null;
-  for (let idx = 0; idx < W + H; idx++) {
-    const n = idx < H ? W : H, line = new Int8Array(n), at = [];
-    for (let x = 0; x < n; x++) { const i = idx < H ? idx * W + x : x * W + idx - H; at.push(i); line[x] = st[i]; }
-    const out = solveLine(line, idx < H ? cur.rows[idx] : cur.cols[idx - H]);
-    if (!out) continue;
-    // crosses are not needed to win, so prefer lines that reveal a cell to fill
-    const fills = at.filter((i, x) => line[x] === -1 && out.res[x] === 1);
-    const gains = fills.length ? fills : at.filter((i, x) => line[x] === -1 && out.res[x] === 0);
-    if (!gains.length) continue;
-    const rank = (fills.length ? 0 : 1e12) + out.count;
-    if (!best || rank < best.rank) best = { rank, count: out.count, gains, at, row: idx < H };
-  }
+  // in the practice puzzle, the bulb first explains a line; the player then chooses to get a cell or try alone
+  if (isPractice()) { openTip(); return; }
+  undoStack.push(cells.slice());
+  startTimer();
+  bumpHints();
+  const best = easiestLine();
   let i;
   if (best) {
     i = best.gains[Math.floor(best.gains.length / 2)];
     toast(best.row ? t(40, "Look at this row.") : t(41, "Look at this column."));
   } else {
     const open = [];
-    for (let k = 0; k < W * H; k++) if (cells[k] === 0) open.push(k);
+    for (let k = 0; k < cur.width * cur.height; k++) if (cells[k] === 0) open.push(k);
     if (!open.length) return;
     i = open[Math.floor(Math.random() * open.length)];
   }
   cells[i] = cur.sol[i] ? 1 : 2;
   focusCell = i;
   showFlash(new Set(best ? best.at : [i]), css("--blue"));
+  persist();
+  checkWin();
+};
+
+// tips in the practice puzzle: first the three lines a beginner can solve on their own (found by their clue,
+// so they are skipped when the practice puzzle changes), then any line, with a general explanation
+let tip = null;   // { idx, at, targets }: the line that is explained and the cells it proves
+const PRACTICE_TIPS = [
+  { row: false, clue: [2, 2], text: () => t(217, "Look at the column with <b>2 2</b>. Two blocks always need at least one blank cell between them, and this column has only 5 cells. So there is just one way: a block of 2 at the top, then one blank cell, then another block of 2.") },
+  { row: true, clue: [4], text: () => t(218, "Look at the row with <b>4</b>. It has only 5 cells, so wherever the block of 4 starts, it always covers cells 2, 3 and 4. You can fill those already. Whether cell 1 or cell 5 is colored, you don't know yet.") },
+  { row: false, clue: [3], text: () => t(219, "Look at the column with <b>3</b>. Just like the row with 4: the block of 3 can start at the top (cells 1 to 3) or end at the bottom (cells 3 to 5), the two extremes. Either way, cell 3 is colored. The rest of the block can't be filled with certainty yet, from this column alone.") },
+];
+function findTip() {
+  const W = cur.width, H = cur.height;
+  for (const pt of PRACTICE_TIPS) {
+    for (let idx = pt.row ? 0 : H; idx < (pt.row ? H : W + H); idx++) {
+      const clue = pt.row ? cur.rows[idx] : cur.cols[idx - H], at = lineCells(idx);
+      if (at.length !== 5 || clue.join(" ") !== pt.clue.join(" ")) continue;
+      // the cells this line fills on its own, from an empty line
+      const out = solveLine(new Int8Array(5).fill(-1), clue);
+      const targets = out ? at.filter((i, x) => out.res[x] === 1 && cells[i] !== 1) : [];
+      if (targets.length) return { idx, at, targets, text: pt.text() };
+    }
+  }
+  const best = easiestLine();
+  if (!best) return null;
+  const text = !best.fills && lineDone(best.idx)
+    ? (best.row ? t(220, "All blocks of this row are already colored, so its other cells stay blank. Mark them with <b>Blank</b>: that helps you with the columns.")
+      : t(221, "All blocks of this column are already colored, so its other cells stay blank. Mark them with <b>Blank</b>: that helps you with the rows."))
+    : (best.row ? t(222, "Look at this row. Compare its numbers with the cells you already know (colored or blank): some cells can only be one way.")
+      : t(223, "Look at this column. Compare its numbers with the cells you already know (colored or blank): some cells can only be one way."));
+  return { idx: best.idx, at: best.at, targets: best.gains, text };
+}
+function openTip() {
+  tip = findTip();
+  if (!tip) return;
+  $("tipText").innerHTML = tip.text;
+  $("tipBox").hidden = false;
+  focusCell = -1;
+  relayout();
+}
+function closeTip() {
+  if (!tip) return;
+  tip = null;
+  $("tipBox").hidden = true;
+  relayout();
+}
+// called after every move: the tip closes once the player has found its cells
+function checkTip() {
+  if (!tip || !tip.targets.every(i => cells[i] === (cur.sol[i] ? 1 : 2))) return;
+  closeTip();
+  if (!solved) toast(t(227, "Well done!"));
+}
+$("tipNo").onclick = closeTip;
+$("tipYes").onclick = () => {
+  if (!tip || !cur || solved) return;
+  const open = tip.targets.filter(i => cells[i] !== (cur.sol[i] ? 1 : 2));
+  closeTip();
+  if (!open.length) return;
+  const i = open[Math.floor(open.length / 2)];
+  undoStack.push(cells.slice());
+  startTimer();
+  bumpHints();
+  cells[i] = cur.sol[i] ? 1 : 2;
+  focusCell = i;
+  showFlash(new Set([i]), css("--blue"));
   persist();
   checkWin();
 };
@@ -2066,6 +2251,7 @@ function checkWin() {
   if (solved) return;
   for (let idx = 0; idx < cur.width + cur.height; idx++) if (!lineDone(idx)) return;
   solved = true;
+  closeTip();
   zoom = 1; view = { x: 0, y: 0 }; sizeBoard();
   pauseTimer();
   for (let k = 0; k < cells.length; k++) cells[k] = cells[k] === 1 ? 1 : 2;
@@ -2527,12 +2713,17 @@ async function refreshTogether(now, live) {
 }
 
 // ---------- installing as an app ----------
+const UA = navigator.userAgent;
+const IS_IOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+const IS_ANDROID = /Android/.test(UA);
+const SAFARI_VERSION = +((UA.match(/Version\/(\d+)/) || [])[1] || 0);   // Safari's own version (26, 27, ...)
+const IS_MAC_SAFARI = !IS_IOS && /Macintosh/.test(UA) && /Safari\//.test(UA) && !/Chrome|Chromium|Edg|Firefox|OPR/.test(UA) && SAFARI_VERSION >= 17;
 let installEvent = null;
 const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 // shown on phones and tablets (touch screens), and on computers only when the browser offers installing
 function updateInstallLink() {
   const touch = window.matchMedia("(pointer: coarse)").matches;
-  $("installBtn").hidden = isStandalone() || !/^https?:/.test(location.protocol) || !(installEvent || touch);
+  $("installBtn").hidden = isStandalone() || !/^https?:/.test(location.protocol) || !(installEvent || touch || IS_MAC_SAFARI);
 }
 // An install is counted once per device: Chrome and Edge announce it ("appinstalled"), Safari on iPhone and iPad
 // never does, so the first launch from the home screen counts too. An iPhone home-screen app has its own storage,
@@ -2555,8 +2746,54 @@ $("installBtn").onclick = async () => {
     installEvent = null;
     updateInstallLink();
   } else {
-    $("installBg").classList.add("show");
+    installHelp();
   }
+};
+// Safari on iPhone and iPad and most Android browsers have no install button a page can call, so the sheet
+// explains the steps, only for the player's own device. Inside another app (LinkedIn, Instagram, ...) installing
+// is impossible: the page first has to be opened in the real browser.
+function inAppName() {
+  const apps = [[/LinkedInApp/, "LinkedIn"], [/Instagram/, "Instagram"], [/FBAN|FBAV|FB_IAB|FBIOS/, "Facebook"],
+    [/MicroMessenger/, "WeChat"], [/Snapchat/, "Snapchat"], [/TikTok|musical_ly|BytedanceWebview/, "TikTok"],
+    [/Pinterest/, "Pinterest"], [/Twitter/, "X"], [/\bLine\//, "LINE"]];
+  for (const [re, name] of apps) if (re.test(UA)) return name;
+  if (IS_ANDROID && /; wv\)/.test(UA)) return "";          // an Android app showing the page in its own web view
+  if (IS_IOS && /GSA\//.test(UA)) return "";                // the Google app
+  return null;                                              // a real browser
+}
+function installHelp() {
+  const app = inAppName(), inApp = app !== null;
+  const browser = IS_IOS ? "Safari" : "Chrome";
+  $("installInApp").hidden = !inApp;
+  $("installMac").hidden = inApp || !IS_MAC_SAFARI;
+  $("installIos").hidden = inApp || IS_MAC_SAFARI || (IS_ANDROID && !IS_IOS);
+  $("installAndroid").hidden = inApp || IS_MAC_SAFARI || (IS_IOS && !IS_ANDROID);
+  $("installSub").innerHTML = IS_MAC_SAFARI ? t(214, "Put CRIGram in your Dock. It opens in its own window and also works offline.")
+    : t(117, "Put CRIGram on your home screen. It opens full screen and also works offline.");
+  // the platform headings only help when both platforms are shown
+  document.querySelectorAll("#installBg .install-os").forEach(h => { h.hidden = IS_IOS || IS_ANDROID; });
+  $("installIcoStripes").hidden = SAFARI_VERSION < 27;
+  $("installIcoDots").hidden = SAFARI_VERSION >= 27;
+  const otherIos = IS_IOS && /CriOS|FxiOS|EdgiOS|OPiOS/.test(UA);
+  $("installIosSafari").hidden = otherIos;
+  $("installIosOther").hidden = !otherIos;
+  // an iPhone home-screen app starts with empty storage, so say so to players who already solved something here
+  $("installIosNote").hidden = !Object.keys(stats).length;
+  $("installMacNote").hidden = !Object.keys(stats).length;   // a Dock app on a Mac has its own storage too
+  if (inApp) {
+    const name = app || t(209, "another app");
+    $("installInAppWhy").innerHTML = t(206, "You opened CRIGram inside {app}. Its built-in browser cannot put CRIGram on your home screen, and what you solve there stays inside that app.", { app: name });
+    $("installInAppHow").innerHTML = t(207, "Tap the menu (<b>⋯</b> or <b>⋮</b>) in {app} and choose <b>Open in {browser}</b> or <b>Open in browser</b>. Or copy the link below and paste it in {browser}.", { app: name, browser });
+  }
+  track("install-help/" + (inApp ? "in-app" : IS_IOS ? "ios" : IS_ANDROID ? "android" : IS_MAC_SAFARI ? "mac" : "other"),
+    "Install steps opened" + (inApp ? " in " + (app || "another app") : ""));
+  $("installBg").classList.add("show");
+}
+$("installCopy").onclick = async () => {
+  const link = location.origin + location.pathname.replace(/(index|crigram)\.html$/, "");
+  const browser = IS_IOS ? "Safari" : "Chrome";
+  try { await navigator.clipboard.writeText(link); toast(t(210, "Link copied. Paste it in {browser}.", { browser })); }
+  catch (e) { prompt(t(100, "Copy this text:"), link); }
 };
 if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {}));

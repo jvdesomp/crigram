@@ -172,6 +172,14 @@
   .sheet .actions { display: flex; gap: 10px; margin-top: 16px; }
   .sheet .actions .btn { flex: 1; }
   .sheet h3 { margin: 14px 0 6px; font-size: 16px; }
+  /* milestones: a small timeline, newest first, one dot per item in the CRIG colors */
+  .milestones { list-style: none; padding: 0; margin: 10px 0 4px; }
+  .milestones li { position: relative; padding: 0 0 14px 22px; }
+  .milestones li::before { content: ""; position: absolute; left: 4px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--dot, var(--blue)); }
+  .milestones li::after { content: ""; position: absolute; left: 8px; top: 20px; bottom: 2px; width: 2px; background: var(--line); }
+  .milestones li:last-child { padding-bottom: 0; }
+  .milestones li:last-child::after { display: none; }
+  .milestones time { display: block; color: var(--muted); font-size: 13px; }
   .install-steps { list-style: none; padding: 0; margin: 6px 0; counter-reset: step; }
   .install-steps li { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--line); counter-increment: step; }
   .install-steps li:first-child { border-top: 0; }
@@ -269,6 +277,7 @@
       <button class="link" id="howBtn" data-t="27">How to play</button>
       <button class="link" id="reminderLink" data-t="28">Weekly reminder</button>
       <a class="link" id="feedbackLink" href="#" target="_blank" rel="noopener" hidden data-t="23">Feedback &amp; CRIG news</a>
+      <button class="link" id="milestonesBtn" hidden data-t="228">Milestones</button>
       <button class="link" id="installBtn" hidden data-t="29">Install app</button>
       <!-- only for opening the game as a local file on a computer, when testing -->
       <button class="link" id="loadBtn" hidden>Load puzzle file</button>
@@ -404,6 +413,13 @@
       <button class="btn" id="shareCopy" data-t="96">Copy text</button>
       <a class="btn" id="shareDownload" download="crigram-result.png" data-t="97">Download image</a>
     </div>
+    <div class="actions" style="margin-top:8px"><button class="btn" data-close data-t="98">Close</button></div>
+  </div>
+</div>
+<div class="sheet-bg" id="milestonesBg">
+  <div class="sheet">
+    <h2 data-t="228">Milestones</h2>
+    <ul class="milestones" id="milestonesList"></ul>
     <div class="actions" style="margin-top:8px"><button class="btn" data-close data-t="98">Close</button></div>
   </div>
 </div>
@@ -976,6 +992,7 @@ nl: {
   225: "Ja, vul een vakje in",
   226: "Nee, ik probeer zelf",
   227: "Goed zo!",
+  228: "Mijlpalen",
 },
 // </texts>
 };
@@ -1021,6 +1038,7 @@ function setLang(l) {
   renderHome();
   if (!$("notice").hidden) showNotice(noticeVisit);
   showTogether(readJSON(TOGETHER_KEY, null));
+  if ($("milestonesBg").classList.contains("show")) renderMilestones();
   const screen = document.querySelector(".screen.active").id;
   if (screen === "album") renderAlbum();
   if (cur) {
@@ -1404,6 +1422,10 @@ function setPuzzles(data, persist) {
   const prepared = preparePuzzles(data);
   if (!prepared.length) { toast("No puzzles found in this file."); return false; }
   allPuzzles = prepared;
+  // short news for players from the maker: [{ date: "YYYY-MM-DD", en, nl }]
+  milestones = (Array.isArray(data.milestones) ? data.milestones : []).filter(m => m && /^\d{4}-\d{2}-\d{2}$/.test(m.date || "") && m.en)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  $("milestonesBtn").hidden = !milestones.length;
   applyRelease();
   if (persist) {
     const raw = allPuzzles.map(({ sol, rows, cols, ...rest }) => rest);
@@ -1412,6 +1434,19 @@ function setPuzzles(data, persist) {
   renderHome();
   return true;
 }
+// ---------- milestones ----------
+let milestones = [];
+function renderMilestones() {
+  $("milestonesList").innerHTML = milestones.map((m, k) => {
+    const date = new Date(m.date + "T12:00:00").toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
+    return `<li style="--dot:${CRIG_COLORS[k % CRIG_COLORS.length]}"><time datetime="${m.date}">${date}</time>${escapeHtml(m[lang] || m.en)}</li>`;
+  }).join("");
+}
+$("milestonesBtn").onclick = () => {
+  renderMilestones();
+  $("milestonesBg").classList.add("show");
+  track("milestones", "Milestones opened");
+};
 // ---------- weekly calendar reminder ----------
 function openReminder() {
   const base = gameUrl();

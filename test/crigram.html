@@ -495,6 +495,8 @@
 <div id="toast"></div>
 
 <script>
+// start-up timings in ms since the app was opened, shown on the test site only (finding a slow start on iPhone)
+const BOOT = { script: performance.now() };
 // ---------- solver (same logic as the CRIGram maker) ----------
 function solveLine(cells, clue) {
   const n = cells.length, k = clue.length, K = k + 1;
@@ -1597,7 +1599,10 @@ async function init() {
     const saved = "caches" in window && await caches.match(new URL("crigram.json", location.href).href, { ignoreSearch: true });
     if (saved) {
       const text = await saved.text();
-      if (setPuzzles(JSON.parse(text), false)) {
+      BOOT.from = "saved copy"; BOOT.read = performance.now();
+      const ok = setPuzzles(JSON.parse(text), false);
+      BOOT.prepare = performance.now() - BOOT.read;
+      if (ok) {
         dataSig = signature(text);
         afterLoad();
         lastCheck = 0;
@@ -1612,7 +1617,10 @@ async function init() {
       const text = await r.text();
       dataSig = signature(text);
       lastCheck = Date.now();
-      if (setPuzzles(JSON.parse(text), false)) { afterLoad(); return; }
+      BOOT.from = "network"; BOOT.read = performance.now();
+      const ok = setPuzzles(JSON.parse(text), false);
+      BOOT.prepare = performance.now() - BOOT.read;
+      if (ok) { afterLoad(); return; }
     }
   } catch (e) { /* opened as a local file: fall back to stored or picked puzzles */ }
   const stored = readJSON(PUZZLES_KEY, null);
@@ -1624,10 +1632,19 @@ async function init() {
 function afterLoad() {
   if (noticeShown) return;
   noticeShown = true;
+  BOOT.puzzles = performance.now();
+  if (IS_TEST) requestAnimationFrame(() => setTimeout(showBootTimes, 0));
   showNotice(lastVisit);
   markVisit();
   openFromLink();
   loadTogether();
+}
+function showBootTimes() {
+  BOOT.shown = performance.now();
+  const n = performance.getEntriesByType("navigation")[0] || {}, ms = v => (v ? Math.round(v) : "–");
+  const line = `Start (ms): service worker ${ms(n.workerStart)} · page asked ${ms(n.requestStart)} · page arrived ${ms(n.responseEnd)} · ` +
+    `script ${ms(BOOT.script)} to ${ms(BOOT.init)} · puzzles ${ms(BOOT.puzzles)} (${BOOT.from || "?"}, ${ms(BOOT.prepare)} to prepare) · shown ${ms(BOOT.shown)}`;
+  document.querySelector(".hero h1").insertAdjacentHTML("afterend", `<p style="margin:4px 0 0;font-size:11px;opacity:.85">${line}</p>`);
 }
 // someone who has not solved anything yet, while there is a practice puzzle to start with
 function isNewcomer() {
@@ -2866,6 +2883,7 @@ window.addEventListener("orientationchange", () => setTimeout(relayout, 250));
 if (window.visualViewport) window.visualViewport.addEventListener("resize", relayout);
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (cur) drawBoard(); else renderHome(); });
 
+BOOT.init = performance.now();
 init();
 </script>
 </body>

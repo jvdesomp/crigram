@@ -1591,6 +1591,21 @@ function applyPendingUpdates() {
 
 async function init() {
   if (/^https?:/.test(location.protocol)) pageVersion().then(tag => { pageTag = tag; }).catch(() => {});
+  // start at once from the copy the service worker saved last time, then check the network in the background
+  // (crigram.json is about half a megabyte: waiting for it on a slow phone connection showed a white screen)
+  try {
+    const saved = "caches" in window && await caches.match(new URL("crigram.json", location.href).href, { ignoreSearch: true });
+    if (saved) {
+      const text = await saved.text();
+      if (setPuzzles(JSON.parse(text), false)) {
+        dataSig = signature(text);
+        afterLoad();
+        lastCheck = 0;
+        checkForUpdates();
+        return;
+      }
+    }
+  } catch (e) { /* no saved copy: load from the network below */ }
   try {
     const r = await fetch("crigram.json", { cache: "no-store" });
     if (r.ok) {

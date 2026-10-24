@@ -730,6 +730,14 @@ function unscramble(b64, key) {
     return t.startsWith("CRIGRAM:") ? t.slice(8) : null;
   } catch (e) { return null; }
 }
+// since format version 3 the figure is stored apart from the texts, as scrambled image bytes (base64-encoded once)
+function unscrambleFigure(b64, key, type) {
+  try {
+    const b = b64ToBytes(b64), k = keystream(fnv1a("figure|" + key), b.length);
+    for (let i = 0; i < b.length; i++) b[i] ^= k[i];
+    return `data:${type || "image/jpeg"};base64,${bytesToB64(b)}`;
+  } catch (e) { return null; }
+}
 
 // ---------- weekly release: puzzles appear on their date at 06:00 Brussels time ----------
 const RELEASE_TZ = "Europe/Brussels", RELEASE_HOUR = 6;
@@ -1112,9 +1120,13 @@ function unlockPublished(p) {
   const sols = solveAll(W, H, rows, cols, 20);
   for (const sol of sols) {
     const solution = Array.from({ length: H }, (_, r) => Array.from(sol.subarray(r * W, (r + 1) * W)).join(""));
-    const text = unscramble(p.secret, solutionKey(solution, W));
+    const key = solutionKey(solution, W), text = unscramble(p.secret, key);
     if (text != null) {
-      try { return { solution, ...JSON.parse(text) }; } catch (e) { /* try the next solution */ }
+      try {
+        const { imageType, ...rev } = JSON.parse(text);
+        if (typeof p.figure === "string") rev.image = unscrambleFigure(p.figure, key, imageType);
+        return { solution, ...rev };
+      } catch (e) { /* try the next solution */ }
     }
   }
   return null;
@@ -1125,7 +1137,7 @@ function preparePuzzles(data) {
     if (!validPublished(p) || validPuzzle(p)) return p;
     const r = unlockPublished(p);
     if (!r) return null;
-    const { secret, ...rest } = p;
+    const { secret, figure, ...rest } = p;
     return { ...rest, ...r };
   }).filter(validPuzzle).map((p, i) => {
     const W = p.width, H = p.height;
@@ -1585,20 +1597,38 @@ $("reminderLink").addEventListener("click", openReminder);
 // it checks for a new crigram.json (new puzzles) and a new crigram.html (new game version).
 let dataSig = null, pageTag = null, pendingData = null, pendingReload = false, lastCheck = 0;
 const signature = text => fnv1a(text).toString(36) + ":" + text.length;
+// the date of the page that is actually running: document.lastModified comes from the Last-Modified header of the
+// copy that was served, also when the service worker served its saved copy while a newer version was already online
+const PAGE_DATE = Date.parse(document.lastModified);
+const RELOAD_KEY = "crigram.reloadedFor" + KEY_SUFFIX;
 async function pageVersion() {
   const h = await fetch(location.pathname, { method: "HEAD", cache: "no-store" });
-  return h.ok ? h.headers.get("etag") || h.headers.get("last-modified") : null;
+  if (!h.ok) return null;
+  const date = Date.parse(h.headers.get("last-modified") || "");
+  return { tag: h.headers.get("etag") || h.headers.get("last-modified"), date };
+}
+// reloads for a newer page at most once every 30 s: right after an update the reloaded page can still be the
+// saved copy (slow network), and the service worker has the new one by the next check
+function reloadForNewPage(tag) {
+  try {
+    const was = JSON.parse(sessionStorage.getItem(RELOAD_KEY) || "null");
+    if (was && was.tag === tag && Date.now() - was.at < 30e3) return false;
+    sessionStorage.setItem(RELOAD_KEY, JSON.stringify({ tag, at: Date.now() }));
+  } catch (e) { /* no session storage: reload anyway */ }
+  location.reload();
+  return true;
 }
 async function checkForUpdates() {
   if (!/^https?:/.test(location.protocol) || Date.now() - lastCheck < 60e3) return;
   lastCheck = Date.now();
   try {
-    const tag = await pageVersion();
-    if (tag && pageTag && tag !== pageTag) {
-      if (!cur) { location.reload(); return; }
-      pendingReload = true;   // reload as soon as the player leaves the puzzle
+    const v = await pageVersion();
+    // newer online than the page that is running (dates have whole seconds), or changed since the first check
+    if (v && v.tag && (v.date - PAGE_DATE >= 1000 || (pageTag && v.tag !== pageTag))) {
+      if (!cur) { if (reloadForNewPage(v.tag)) return; }
+      else pendingReload = v.tag;   // reload as soon as the player leaves the puzzle
     }
-    if (tag && !pageTag) pageTag = tag;
+    if (v && v.tag && !pageTag) pageTag = v.tag;
     const r = await fetch("crigram.json", { cache: "no-store" });
     if (!r.ok) return;
     const text = await r.text(), sig = signature(text);
@@ -1609,13 +1639,14 @@ async function checkForUpdates() {
   } catch (e) { /* offline: keep what we have */ }
 }
 function applyPendingUpdates() {
-  if (pendingReload) { location.reload(); return true; }
+  if (pendingReload && reloadForNewPage(pendingReload)) return true;
+  pendingReload = false;
   if (pendingData) { setPuzzles(pendingData, false); pendingData = null; }
   return false;
 }
 
 async function init() {
-  if (/^https?:/.test(location.protocol)) pageVersion().then(tag => { pageTag = tag; }).catch(() => {});
+  if (/^https?:/.test(location.protocol)) pageVersion().then(v => { if (v && !pageTag) pageTag = v.tag; }).catch(() => {});
   // start at once from the copy the service worker saved last time, then check the network in the background
   // (crigram.json is about half a megabyte: waiting for it on a slow phone connection showed a white screen)
   try {

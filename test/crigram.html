@@ -730,6 +730,14 @@ function unscramble(b64, key) {
     return t.startsWith("CRIGRAM:") ? t.slice(8) : null;
   } catch (e) { return null; }
 }
+// since format version 3 the figure is stored apart from the texts, as scrambled image bytes (base64-encoded once)
+function unscrambleFigure(b64, key, type) {
+  try {
+    const b = b64ToBytes(b64), k = keystream(fnv1a("figure|" + key), b.length);
+    for (let i = 0; i < b.length; i++) b[i] ^= k[i];
+    return `data:${type || "image/jpeg"};base64,${bytesToB64(b)}`;
+  } catch (e) { return null; }
+}
 
 // ---------- weekly release: puzzles appear on their date at 06:00 Brussels time ----------
 const RELEASE_TZ = "Europe/Brussels", RELEASE_HOUR = 6;
@@ -1112,9 +1120,13 @@ function unlockPublished(p) {
   const sols = solveAll(W, H, rows, cols, 20);
   for (const sol of sols) {
     const solution = Array.from({ length: H }, (_, r) => Array.from(sol.subarray(r * W, (r + 1) * W)).join(""));
-    const text = unscramble(p.secret, solutionKey(solution, W));
+    const key = solutionKey(solution, W), text = unscramble(p.secret, key);
     if (text != null) {
-      try { return { solution, ...JSON.parse(text) }; } catch (e) { /* try the next solution */ }
+      try {
+        const { imageType, ...rev } = JSON.parse(text);
+        if (typeof p.figure === "string") rev.image = unscrambleFigure(p.figure, key, imageType);
+        return { solution, ...rev };
+      } catch (e) { /* try the next solution */ }
     }
   }
   return null;
@@ -1125,7 +1137,7 @@ function preparePuzzles(data) {
     if (!validPublished(p) || validPuzzle(p)) return p;
     const r = unlockPublished(p);
     if (!r) return null;
-    const { secret, ...rest } = p;
+    const { secret, figure, ...rest } = p;
     return { ...rest, ...r };
   }).filter(validPuzzle).map((p, i) => {
     const W = p.width, H = p.height;

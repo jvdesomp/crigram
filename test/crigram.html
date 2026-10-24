@@ -1597,20 +1597,38 @@ $("reminderLink").addEventListener("click", openReminder);
 // it checks for a new crigram.json (new puzzles) and a new crigram.html (new game version).
 let dataSig = null, pageTag = null, pendingData = null, pendingReload = false, lastCheck = 0;
 const signature = text => fnv1a(text).toString(36) + ":" + text.length;
+// the date of the page that is actually running: document.lastModified comes from the Last-Modified header of the
+// copy that was served, also when the service worker served its saved copy while a newer version was already online
+const PAGE_DATE = Date.parse(document.lastModified);
+const RELOAD_KEY = "crigram.reloadedFor" + KEY_SUFFIX;
 async function pageVersion() {
   const h = await fetch(location.pathname, { method: "HEAD", cache: "no-store" });
-  return h.ok ? h.headers.get("etag") || h.headers.get("last-modified") : null;
+  if (!h.ok) return null;
+  const date = Date.parse(h.headers.get("last-modified") || "");
+  return { tag: h.headers.get("etag") || h.headers.get("last-modified"), date };
+}
+// reloads for a newer page at most once every 30 s: right after an update the reloaded page can still be the
+// saved copy (slow network), and the service worker has the new one by the next check
+function reloadForNewPage(tag) {
+  try {
+    const was = JSON.parse(sessionStorage.getItem(RELOAD_KEY) || "null");
+    if (was && was.tag === tag && Date.now() - was.at < 30e3) return false;
+    sessionStorage.setItem(RELOAD_KEY, JSON.stringify({ tag, at: Date.now() }));
+  } catch (e) { /* no session storage: reload anyway */ }
+  location.reload();
+  return true;
 }
 async function checkForUpdates() {
   if (!/^https?:/.test(location.protocol) || Date.now() - lastCheck < 60e3) return;
   lastCheck = Date.now();
   try {
-    const tag = await pageVersion();
-    if (tag && pageTag && tag !== pageTag) {
-      if (!cur) { location.reload(); return; }
-      pendingReload = true;   // reload as soon as the player leaves the puzzle
+    const v = await pageVersion();
+    // newer online than the page that is running (dates have whole seconds), or changed since the first check
+    if (v && v.tag && (v.date - PAGE_DATE >= 1000 || (pageTag && v.tag !== pageTag))) {
+      if (!cur) { if (reloadForNewPage(v.tag)) return; }
+      else pendingReload = v.tag;   // reload as soon as the player leaves the puzzle
     }
-    if (tag && !pageTag) pageTag = tag;
+    if (v && v.tag && !pageTag) pageTag = v.tag;
     const r = await fetch("crigram.json", { cache: "no-store" });
     if (!r.ok) return;
     const text = await r.text(), sig = signature(text);
@@ -1621,13 +1639,14 @@ async function checkForUpdates() {
   } catch (e) { /* offline: keep what we have */ }
 }
 function applyPendingUpdates() {
-  if (pendingReload) { location.reload(); return true; }
+  if (pendingReload && reloadForNewPage(pendingReload)) return true;
+  pendingReload = false;
   if (pendingData) { setPuzzles(pendingData, false); pendingData = null; }
   return false;
 }
 
 async function init() {
-  if (/^https?:/.test(location.protocol)) pageVersion().then(tag => { pageTag = tag; }).catch(() => {});
+  if (/^https?:/.test(location.protocol)) pageVersion().then(v => { if (v && !pageTag) pageTag = v.tag; }).catch(() => {});
   // start at once from the copy the service worker saved last time, then check the network in the background
   // (crigram.json is about half a megabyte: waiting for it on a slow phone connection showed a white screen)
   try {

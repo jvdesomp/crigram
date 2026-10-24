@@ -1228,6 +1228,14 @@ function sendEvents() {
   eventTimer = setTimeout(() => { eventTimer = 0; sendEvents(); }, 350);
 }
 function setupCounting() {
+  // the address people share (…/crigram/) is index.html, which forwards here: the browser then names that page as the
+  // referrer, so index.html passes on the real one (empty = direct)
+  try {
+    const ref = sessionStorage.getItem("crigram.ref");
+    sessionStorage.removeItem("crigram.ref");
+    if (ref !== null && document.referrer && new URL(document.referrer).origin === location.origin)
+      window.goatcounter = { ...(window.goatcounter || {}), referrer: ref };
+  } catch (e) { /* ignore */ }
   if (IS_TEST) {
     document.querySelector(".hero h1").insertAdjacentHTML("afterend", '<p style="margin:6px 0 0;font-weight:700;letter-spacing:.5px">Test version</p>');
     return;
@@ -1272,6 +1280,14 @@ function starText(p) {
 const stars = p => (p.difficulty && p.difficulty.label ? `<span title="${levelName(p.difficulty)}" aria-label="${levelName(p.difficulty)}">${starText(p)}</span>` : starText(p));
 const sizeStars = p => `${p.width} × ${p.height}` + (p.difficulty ? ` · ${stars(p)}` : "");
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+// numbers: plain up to 9999, from 10 000 a (no-break) space every three digits, in every language;
+// decimals with the decimal sign of the phone's region (nl-BE, en-BE, fr-FR: comma; en-US, en-GB: point)
+const DECIMAL = (() => { try { return new Intl.NumberFormat(navigator.languages || navigator.language).formatToParts(1.5).find(x => x.type === "decimal").value; } catch (e) { return "."; } })();
+function fmtNum(n, digits = 0) {
+  const [whole, frac] = Math.abs(n).toFixed(digits).split(".");
+  const w = whole.length > 4 ? whole.replace(/\B(?=(\d{3})+$)/g, "\u00a0") : whole;
+  return (n < 0 ? "-" : "") + w + (frac ? DECIMAL + frac : "");
+}
 function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
 // ---------- orientation while solving ----------
@@ -2654,7 +2670,7 @@ async function showCommunity(p, myTime, myHints) {
       Promise.all(["0", "1", "2-or-more"].map(h => gcCount(`solved/${p.id}/hints-${h}`))),
     ]);
     if (cur !== p) return;
-    html += t(76, "Solved by <b>{n}</b> players.", { n: solved.toLocaleString(locale) });
+    html += t(76, "Solved by <b>{n}</b> players.", { n: fmtNum(solved) });
     const tTotal = times.reduce((a, b) => a + (b || 0), 0);
     if (tTotal >= 3) {
       let acc = 0, mid = 0;
@@ -2786,8 +2802,8 @@ function showTogether(tg) {
   const h = tg.minutes / 60, hours = h >= 2;
   const score = (n, label) => `<div><b>${n}</b><small>${label}</small></div>`;
   box.innerHTML = `<div class="head">${t(179, "All players so far")}</div><div class="scores">` +
-    score(tg.solves.toLocaleString(locale), t(180, "puzzles solved")) +
-    score(Math.round(hours ? h : tg.minutes).toLocaleString(locale), hours ? t(181, "hours of puzzling") : t(187, "minutes of puzzling")) +
+    score(fmtNum(tg.solves), t(180, "puzzles solved")) +
+    score(fmtNum(hours ? h : tg.minutes), hours ? t(181, "hours of puzzling") : t(187, "minutes of puzzling")) +
     score(tg.papers, tg.papers === 1 ? t(188, "cancer research paper in the spotlight") : t(182, "cancer research papers in the spotlight")) + "</div>";
 }
 // called at start and each time the game comes back to the foreground

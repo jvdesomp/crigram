@@ -4,8 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CRIGram</title>
-<!-- forwards to the game and keeps a puzzle link (?p=…) and campaign tags (?utm_campaign=…) -->
-<script>location.replace("crigram.html" + location.search + location.hash);</script>
+<!-- forwards to the game and keeps a puzzle link (?p=…) and campaign tags (?utm_campaign=…); after the forward the
+     browser names this page as the referrer, so the real one (LinkedIn, Teams, …) is passed on for the visitor count -->
+<script>
+try { sessionStorage.setItem("crigram.ref", document.referrer); } catch (e) { /* ignore */ }
+location.replace("crigram.html" + location.search + location.hash);
+</script>
 <noscript><meta http-equiv="refresh" content="0; url=crigram.html"></noscript>
 </head>
 <body>

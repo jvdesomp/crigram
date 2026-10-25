@@ -175,6 +175,7 @@
   /* practice puzzle: a tip about one line, between the grid and the tool bar */
   .tip-box { flex: none; box-sizing: border-box; width: calc(100% - 24px); max-width: 560px; margin: 0 auto 10px; padding: 10px 14px 12px; border-radius: 12px; background: var(--blue-soft); font-size: 14px; line-height: 1.4; -webkit-user-select: text; user-select: text; }
   .tip-box p { margin: 4px 0 8px; }
+  .tip-box .tip-count { display: block; margin-top: 6px; }
   .tip-box .tip-ask { font-weight: 600; margin-bottom: 8px; }
   .tip-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .tip-actions .btn { flex: 1 1 140px; }
@@ -334,7 +335,7 @@
   <div class="tip-box" id="tipBox" role="status" hidden>
     <b data-t="216">Tip</b>
     <p id="tipText"></p>
-    <p class="tip-ask" data-t="224">Shall I fill in a cell for you?</p>
+    <p class="tip-ask" id="tipAsk" data-t="224">Shall I fill in a cell for you?</p>
     <div class="tip-actions">
       <button class="btn slim primary" id="tipYes" data-t="225">Yes, fill in a cell</button>
       <button class="btn slim" id="tipNo" data-t="226">No, I'll try myself</button>
@@ -857,10 +858,6 @@ nl: {
   35: "Kleur",
   36: "Leeg",
   37: "Deze puzzel opnieuw beginnen?",
-  38: "Dit vakje was fout. Het is gewist.",
-  39: "Dit vakje was fout ({n} fouten in totaal). Het is gewist.",
-  40: "Kijk naar deze rij.",
-  41: "Kijk naar deze kolom.",
   42: "Terug naar de puzzels",
   43: "Over deze figuur",
   44: "Ongedaan maken",
@@ -1019,13 +1016,66 @@ nl: {
   219: "Kijk naar de kolom met <b>3</b>. Net als bij de rij met 4: het blok van 3 kan bovenaan starten (vakjes 1 tot 3) of onderaan eindigen (vakjes 3 tot 5), de twee meest extreme mogelijkheden. In beide gevallen is vakje 3 gekleurd. De rest van het blok kan je op basis van enkel deze kolom nog niet met zekerheid inkleuren.",
   220: "Alle blokken van deze rij zijn al gekleurd, dus de andere vakjes blijven leeg. Duid ze aan met <b>Leeg</b>: dat helpt je bij de kolommen.",
   221: "Alle blokken van deze kolom zijn al gekleurd, dus de andere vakjes blijven leeg. Duid ze aan met <b>Leeg</b>: dat helpt je bij de rijen.",
-  222: "Kijk naar deze rij. Vergelijk de cijfers met de vakjes die je al kent (gekleurd of leeg): sommige vakjes kunnen maar op één manier.",
-  223: "Kijk naar deze kolom. Vergelijk de cijfers met de vakjes die je al kent (gekleurd of leeg): sommige vakjes kunnen maar op één manier.",
   224: "Zal ik een vakje voor je invullen?",
   225: "Ja, vul een vakje in",
   226: "Nee, ik probeer zelf",
   227: "Goed zo!",
   228: "Mijlpalen",
+  229: "deze rij",
+  230: "deze kolom",
+  231: "Kijk naar {line}: het getal is <b>0</b>, dus geen enkel vakje is gekleurd. Duid ze allemaal aan met <b>Leeg</b>.",
+  232: "Kijk naar {line}. De blokken ({clue}) hebben, met telkens één leeg vakje ertussen, precies {n} vakjes nodig: de hele lijn. Er is dus maar één manier om ze te plaatsen, en je kan de lijn van begin tot einde invullen.",
+  233: "Kijk naar {line}. Die heeft {n} vakjes, en de blokken ({clue}) hebben er minstens {m} nodig, met telkens één leeg vakje ertussen. De blokken kunnen dus hoogstens {s} opschuiven. Schuif ze allemaal zo ver mogelijk naar de ene kant, en dan naar de andere: de vakjes die een blok in beide gevallen bedekt, zijn zeker gekleurd. Dat werkt voor elk blok dat langer is dan {s}.",
+  235: "Kijk naar {line} en de vakjes die je er al kent (gekleurd of leeg). Probeer waar elk blok nog kan liggen: een vakje dat in elke mogelijke positie gekleurd is, moet je inkleuren. Begin bij de uiteinden van de lijn, en bij het grootste blok.",
+  236: "vakje {a}",
+  237: "vakjes {a} tot {b}",
+  238: "{a} tot {b}",
+  239: "van links geteld",
+  240: "van boven geteld",
+  241: "Kijk naar {line}. Het kortste blok is {min}, dus in een gat van minder vakjes tussen lege vakjes of de rand past geen enkel blok. Duid de vakjes in zulke gaten aan met <b>Leeg</b>: {where}.",
+  242: "Kijk naar {line}. Het blok van {L} op {cells} is al volledig: geen enkel blok in deze lijn is langer. De vakjes er net naast zijn dus leeg: duid {empty} aan met <b>Leeg</b>.",
+  243: "Kijk naar {line}. Het blok van {L} op {cells} is al volledig: alleen blokken van {L} kunnen daar komen. De vakjes er net naast zijn dus leeg: duid {empty} aan met <b>Leeg</b>.",
+  244: "Kijk naar {line}. Aan de uiteinden zijn de blokken in de vakjes die je al kent volledig (ze eindigen bij een leeg vakje of de rand), dus de overige blokken ({clue}) moeten passen in {where}: {m} vakjes. Ze hebben er minstens {need} nodig, met telkens één leeg vakje ertussen, dus ze kunnen hoogstens {s} opschuiven. Schuif ze naar de ene kant en dan naar de andere: de vakjes die een blok in beide gevallen bedekt, zijn zeker gekleurd.",
+  245: "Kijk naar {line}. Aan de uiteinden zijn de blokken in de vakjes die je al kent volledig (ze eindigen bij een leeg vakje of de rand), dus de overige blokken ({clue}) moeten passen in {where}. Met telkens één leeg vakje ertussen hebben ze precies die {m} vakjes nodig: er is maar één manier om ze te plaatsen, dus kleur ze in.",
+  246: "Kijk naar {line}. Het gekleurde {cell} ligt zo dicht bij {bound} dat er geen ander blok vóór past, dus het hoort bij het eerste blok ({L}). Dat blok kan niet vóór {start} beginnen, dus het reikt minstens tot {end}. Kleur {fill} in.",
+  247: "Kijk naar {line}. Het gekleurde {cell} ligt zo dicht bij {bound} dat er geen ander blok na past, dus het hoort bij het laatste blok ({L}). Dat blok kan niet na {end} eindigen, dus het begint ten laatste bij {start}. Kleur {fill} in.",
+  248: "de linkerrand",
+  249: "het lege {cell}",
+  250: "Duid ook {where} aan met <b>Leeg</b>: zo ver reikt dat blok niet.",
+  251: "Kijk naar {line}. Het gekleurde {cell} hoort bij een blok van minstens {L} vakjes: dat is het kortste blok van deze lijn. Dat blok kan niet over {bound} heen, dus het reikt minstens tot {end}. Kleur {fill} in.",
+  252: "Kijk naar {line}. Het gekleurde {cell} kan alleen bij een blok van {L} horen: de andere blokken kunnen er niet bij. Dat blok kan niet over {bound} heen, dus het reikt minstens tot {end}. Kleur {fill} in.",
+  253: "Kijk naar {line}. Het gekleurde {cell} kan alleen bij een blok van minstens {L} vakjes horen: de kortere blokken kunnen er niet bij. Dat blok kan niet over {bound} heen, dus het reikt minstens tot {end}. Kleur {fill} in.",
+  254: "Kijk naar {line}. Alleen {run} kan bij de gekleurde {cells}, dus die horen bij hetzelfde blok. Kleur de vakjes ertussen in: {fill}.",
+  255: "Kijk naar {line}. Met de vakjes die je al kent, kan {run} alleen ergens in {range} liggen. Waar het daar ook ligt, het bedekt altijd {fill}.",
+  256: "het blok van {L}",
+  257: "het blok van {L} (het {i}e getal)",
+  258: "Kijk naar {line}. Duid {where} aan met <b>Leeg</b>: met de vakjes die je al kent, kan geen enkel blok daar nog komen. Er past geen blok, of geen blok reikt zo ver.",
+  259: "vakjes {a} en {b}",
+  260: "de rechterrand",
+  261: "de bovenrand",
+  262: "de onderrand",
+  263: "Dat blok is dan volledig: duid ook {where} aan met <b>Leeg</b>.",
+  264: "Kijk naar {line}. Aan de uiteinden zijn de blokken in de vakjes die je al kent volledig (ze eindigen bij een leeg vakje of de rand), dus het blok dat overblijft ({L}) moet in {where} liggen: {m} vakjes. Het kan hoogstens {s} opschuiven, dus de vakjes die het bedekt als je het naar de ene kant én naar de andere kant schuift, zijn zeker gekleurd.",
+  265: "Kijk naar {line}. Aan de uiteinden zijn de blokken in de vakjes die je al kent volledig (ze eindigen bij een leeg vakje of de rand), dus het blok dat overblijft ({L}) vult precies {where}: kleur het in.",
+  266: "Kijk naar {line}. Met de vakjes die je al kent, past {run} maar op één plaats: {fill}. Kleur het in.",
+  267: "Je hebt 1 fout.",
+  268: "Je hebt {n} fouten.",
+  269: "Je hebt nog 1 fout.",
+  270: "Je hebt nog {n} fouten.",
+  271: "Een tip werkt pas als al je vakjes kloppen.",
+  275: "Nee, ik zoek zelf",
+  276: "Dat was je laatste fout: tik opnieuw op het lampje voor een tip.",
+  277: "1 vakje om in te kleuren",
+  278: "{n} vakjes om in te kleuren",
+  279: "1 vakje om aan te duiden met <b>Leeg</b>",
+  280: "{n} vakjes om aan te duiden met <b>Leeg</b>",
+  281: "Met deze tip vind je {count}.",
+  282: "{a} en {b}",
+  283: "Dit vakje was fout: het is nu aangeduid met <b>Leeg</b>.",
+  284: "Dit vakje was fout: het is nu gekleurd.",
+  285: "Zal ik er een voor je verbeteren?",
+  286: "Zal ik er nog een verbeteren? Dat telt als een extra hint.",
+  287: "Ja, verbeter er een",
 },
 // </texts>
 };
@@ -1228,6 +1278,14 @@ function sendEvents() {
   eventTimer = setTimeout(() => { eventTimer = 0; sendEvents(); }, 350);
 }
 function setupCounting() {
+  // the address people share (…/crigram/) is index.html, which forwards here: the browser then names that page as the
+  // referrer, so index.html passes on the real one (empty = direct)
+  try {
+    const ref = sessionStorage.getItem("crigram.ref");
+    sessionStorage.removeItem("crigram.ref");
+    if (ref !== null && document.referrer && new URL(document.referrer).origin === location.origin)
+      window.goatcounter = { ...(window.goatcounter || {}), referrer: ref };
+  } catch (e) { /* ignore */ }
   if (IS_TEST) {
     document.querySelector(".hero h1").insertAdjacentHTML("afterend", '<p style="margin:6px 0 0;font-weight:700;letter-spacing:.5px">Test version</p>');
     return;
@@ -1272,6 +1330,14 @@ function starText(p) {
 const stars = p => (p.difficulty && p.difficulty.label ? `<span title="${levelName(p.difficulty)}" aria-label="${levelName(p.difficulty)}">${starText(p)}</span>` : starText(p));
 const sizeStars = p => `${p.width} × ${p.height}` + (p.difficulty ? ` · ${stars(p)}` : "");
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+// numbers: plain up to 9999, from 10 000 a (no-break) space every three digits, in every language;
+// decimals with the decimal sign of the phone's region (nl-BE, en-BE, fr-FR: comma; en-US, en-GB: point)
+const DECIMAL = (() => { try { return new Intl.NumberFormat(navigator.languages || navigator.language).formatToParts(1.5).find(x => x.type === "decimal").value; } catch (e) { return "."; } })();
+function fmtNum(n, digits = 0) {
+  const [whole, frac] = Math.abs(n).toFixed(digits).split(".");
+  const w = whole.length > 4 ? whole.replace(/\B(?=(\d{3})+$)/g, "\u00a0") : whole;
+  return (n < 0 ? "-" : "") + w + (frac ? DECIMAL + frac : "");
+}
 function escapeHtml(s) { return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
 // ---------- orientation while solving ----------
@@ -1776,7 +1842,7 @@ function openPuzzle(i) {
   startedAt = 0;
   undoStack = [];
   focusCell = -1; flash = null;
-  tip = null; $("tipBox").hidden = true;
+  tip = null; tipCounted = -1; $("tipBox").hidden = true;
   revealAlpha = solved ? 1 : 0;
   colorWave = 1;
   revealImg = null;
@@ -1953,7 +2019,7 @@ function drawBoard() {
   ctx.save();
   ctx.beginPath(); ctx.rect(0, top, left, vh); ctx.clip();
   if (fr >= 0 && !solved) { ctx.fillStyle = C.focus; ctx.fillRect(0, top + fr * cs - oy, left, cs); }
-  if (tip && tip.idx < H) { ctx.fillStyle = C.blue; ctx.globalAlpha = .22; ctx.fillRect(0, top + tip.idx * cs - oy, left, cs); ctx.globalAlpha = 1; }
+  if (tip && tip.idx >= 0 && tip.idx < H) { ctx.fillStyle = C.blue; ctx.globalAlpha = .22; ctx.fillRect(0, top + tip.idx * cs - oy, left, cs); ctx.globalAlpha = 1; }
   cur.rows.forEach((c, r) => {
     const y = top + r * cs - oy + cs / 2 + 1;
     if (y < top - cs || y > top + vh + cs) return;
@@ -2006,7 +2072,7 @@ function drawBoard() {
   ctx.moveTo(W * cs + .5, 0); ctx.lineTo(W * cs + .5, H * cs);
   ctx.moveTo(0, H * cs + .5); ctx.lineTo(W * cs, H * cs + .5);
   ctx.stroke();
-  if (tip) {
+  if (tip && tip.idx >= 0) {
     ctx.strokeStyle = C.blue; ctx.lineWidth = 3;
     if (tip.idx < H) ctx.strokeRect(1.5, tip.idx * cs + 1.5, W * cs - 2, cs - 2);
     else ctx.strokeRect((tip.idx - H) * cs + 1.5, 1.5, cs - 2, H * cs - 2);
@@ -2175,7 +2241,7 @@ $("infoBtn").onclick = () => { if (cur && solved) showWin(true); };
 $("restartBtn").onclick = () => {
   if (!cur) return;
   if (!confirm(t(37, "Restart this puzzle?"))) return;
-  closeTip();
+  closeTip(); tipCounted = -1;
   cells.fill(0); undoStack = []; solved = false; elapsed = 0; startedAt = 0; revealAlpha = 0;
   progress[cur.id] = { cells: Array.from(cells).join(""), time: 0, solved: false, hints: 0 };
   saveProgress();
@@ -2198,20 +2264,217 @@ function lineCells(idx) {
   else for (let y = 0; y < H; y++) at.push(y * W + idx - H);
   return at;
 }
-// the easiest line that yields a new cell, like a player would: { at, gains, fills, row, idx } or null
+// where each run of a line can start, given its known cells: one list of start cells per run (the tables of solveLine)
+function runStarts(cells, clue) {
+  const n = cells.length, k = clue.length, K = k + 1;
+  const z = new Int32Array(n + 1);
+  for (let i = 0; i < n; i++) z[i + 1] = z[i] + (cells[i] === 0 ? 1 : 0);
+  const fillable = (a, b) => z[b] - z[a] === 0;
+  const canEmpty = i => cells[i] !== 1;
+  const P = new Uint8Array((n + 1) * K), S = new Uint8Array((n + 1) * K);
+  P[0] = 1;
+  for (let i = 1; i <= n; i++) for (let j = 0; j <= k; j++) {
+    let v = canEmpty(i - 1) && P[(i - 1) * K + j];
+    if (!v && j > 0) {
+      const L = clue[j - 1], s = i - L;
+      if (s >= 0 && fillable(s, i)) v = s === 0 ? j === 1 : (canEmpty(s - 1) && P[(s - 1) * K + j - 1]);
+    }
+    P[i * K + j] = v ? 1 : 0;
+  }
+  S[n * K + k] = 1;
+  for (let i = n - 1; i >= 0; i--) for (let j = k; j >= 0; j--) {
+    let c = canEmpty(i) && S[(i + 1) * K + j];
+    if (!c && j < k) {
+      const L = clue[j], e = i + L;
+      if (e <= n && fillable(i, e)) c = e === n ? j === k - 1 : (canEmpty(e) && S[(e + 1) * K + j + 1]);
+    }
+    S[i * K + j] = c ? 1 : 0;
+  }
+  return clue.map((L, j) => {
+    const starts = [];
+    for (let s = 0; s + L <= n; s++) {
+      if (!fillable(s, s + L)) continue;
+      const left = s === 0 ? j === 0 : (canEmpty(s - 1) && P[(s - 1) * K + j] === 1);
+      const right = s + L === n ? j === k - 1 : (canEmpty(s + L) && S[(s + L + 1) * K + j + 1] === 1);
+      if (left && right) starts.push(s);
+    }
+    return starts;
+  });
+}
+// the simplest explanation for line idx that gives new cells, or null: { level, fills, set: [[x, value]], kind, count, text() }.
+// Each technique claims only the cells its own text proves; the levels go from the easiest to follow (0)
+// to the general advice (14). A technique that reveals a cell to fill goes before one that only gives blank cells.
+function explainLine(idx) {
+  const H = cur.height, row = idx < H, at = lineCells(idx), n = at.length;
+  const clue = row ? cur.rows[idx] : cur.cols[idx - H], k = clue.length;
+  const v = Int8Array.from(at, i => cells[i] === 1 ? 1 : cells[i] === 2 ? 0 : -1);
+  const out = solveLine(v, clue);
+  if (!out) return null;
+  const open = x => v[x] === -1;
+  const fills = [], blanks = [];
+  for (let x = 0; x < n; x++) if (open(x)) { if (out.res[x] === 1) fills.push(x); else if (out.res[x] === 0) blanks.push(x); }
+  if (!fills.length && !blanks.length) return null;
+  const line = row ? t(229, "this row") : t(230, "this column");
+  const range = (a, b) => Array.from({ length: Math.max(0, b - a + 1) }, (_, i) => a + i);
+  // cells of the line in words, counted from the left (rows) or the top (columns): "cells 3 to 5 and 9 (from the left)";
+  // only the first cells named in a tip say where the counting starts
+  let sideSaid = false;
+  const where = xs => {
+    const groups = [];
+    for (let i = 0; i < xs.length;) {
+      let j = i;
+      while (j + 1 < xs.length && xs[j + 1] === xs[j] + 1) j++;
+      groups.push([xs[i] + 1, xs[j] + 1]);
+      i = j + 1;
+    }
+    const [a, b] = groups[0];
+    const list = groups.length > 1
+      ? t(259, "cells {a} and {b}", { a: groups.slice(0, -1).map(([x, y]) => x === y ? x : t(238, "{a} to {b}", { a: x, b: y })).join(", "),
+        b: groups.slice(-1).map(([x, y]) => x === y ? x : t(238, "{a} to {b}", { a: x, b: y }))[0] })
+      : a === b ? t(236, "cell {a}", { a }) : b === a + 1 ? t(259, "cells {a} and {b}", { a, b }) : t(237, "cells {a} to {b}", { a, b });
+    if (sideSaid) return list;
+    sideSaid = true;
+    return `${list} (${row ? t(239, "from the left") : t(240, "from the top")})`;
+  };
+  const nums = c => `<b>${c.join(" ")}</b>`;
+  let best = null;
+  const add = (level, kind, fill, blank, text) => {
+    const set = [...fill.filter(open).map(x => [x, 1]), ...blank.filter(open).map(x => [x, 0])];
+    if (!set.length) return;
+    const f = set.some(s => s[1] === 1);
+    if (!best || (f && !best.fills) || (f === best.fills && (level < best.level || (level === best.level && set.length > best.set.length)))) {
+      best = { level, fills: f, set, kind, count: out.count, text: () => { sideSaid = false; return text(); } };
+    }
+  };
+  const sum = clue.reduce((a, b) => a + b, 0), need = sum + k - 1;
+  if (!sum) {
+    add(0, 231, [], range(0, n - 1), () => t(231, "Look at {line}: its number is <b>0</b>, so none of its cells are colored. Mark them all with <b>Blank</b>.", { line }));
+    return best;
+  }
+  if (lineClue(Array.from(v, c => c === 1 ? 1 : 0)).join() === clue.join()) add(1, row ? 220 : 221, [], range(0, n - 1), () => row
+    ? t(220, "All runs of this row are already colored, so its other cells stay empty. Mark them with <b>Blank</b>: that helps you with the columns.")
+    : t(221, "All runs of this column are already colored, so its other cells stay empty. Mark them with <b>Blank</b>: that helps you with the rows."));
+  if (v.every(c => c === -1)) {
+    if (need === n) add(2, 232, fills, blanks, () => t(232, "Look at {line}. Its runs ({clue}), with one empty cell between each two, need exactly {n} cells: the whole line. So there is only one way to place them, and you can fill the line from end to end.", { line, clue: nums(clue), n }));
+    else add(3, 233, fills, [], () => t(233, "Look at {line}. It has {n} cells, and its runs ({clue}) need at least {m}, with one empty cell between each two. So the runs can shift by at most {s}. Push them all as far as they go to one side, then to the other: the cells a run covers in both positions are colored for sure. That works for every run longer than {s}.", { line, clue: nums(clue), n, m: need, s: n - need }));
+    return best;
+  }
+  // the stretches between blank cells (segments) and the colored blocks
+  const segs = [], blocks = [];
+  for (let x = 0; x < n;) {
+    if (v[x] === 0) { x++; continue; }
+    let y = x;
+    while (y < n && v[y] !== 0) y++;
+    segs.push([x, y]); x = y;
+  }
+  for (let x = 0; x < n;) {
+    if (v[x] !== 1) { x++; continue; }
+    let y = x;
+    while (y < n && v[y] === 1) y++;
+    blocks.push([x, y]); x = y;
+  }
+  const segOf = x => segs.find(s => s[0] <= x && x < s[1]);
+  const starts = runStarts(v, clue);
+  const coverOf = x => clue.map((L, j) => j).filter(j => starts[j].some(s => s <= x && x < s + clue[j]));
+  const runName = j => clue.filter(L => L === clue[j]).length > 1
+    ? t(257, "the run of {L} (number {i} in the clue)", { L: clue[j], i: j + 1 })
+    : t(256, "the run of {L}", { L: clue[j] });
+  const bound = x => x >= 0 && x < n ? t(249, "the empty {cell}", { cell: where([x]) })
+    : x < 0 ? (row ? t(248, "the left edge") : t(261, "the top edge")) : (row ? t(260, "the right edge") : t(262, "the bottom edge"));
+  // a run that is now fully placed gets its blank cells on both sides
+  const closed = bl => bl.some(open) ? " " + t(263, "That run is then complete: mark {where} with <b>Blank</b> as well.", { where: where(bl.filter(open)) }) : "";
+  const maxL = Math.max(...clue), minL = Math.min(...clue);
+  // a colored block as long as the longest run, or as the only runs that can reach it, is complete: close it
+  for (const [s, e] of blocks) {
+    const nb = [s - 1, e].filter(x => x >= 0 && x < n && open(x));
+    if (!nb.length) continue;
+    const lens = coverOf(s).map(j => clue[j]);
+    if (e - s === maxL) add(4, 242, [], nb, () => t(242, "Look at {line}. The run of {L} at {cells} is already complete: no run in this line is longer. So the cells right next to it are empty: mark {empty} with <b>Blank</b>.", { line, cells: where(range(s, e - 1)), L: maxL, empty: where(nb) }));
+    else if (lens.every(L => L === e - s)) add(9, 243, [], nb, () => t(243, "Look at {line}. The run of {L} at {cells} is already complete: only runs of {L} can reach there. So the cells right next to it are empty: mark {empty} with <b>Blank</b>.", { line, cells: where(range(s, e - 1)), L: e - s, empty: where(nb) }));
+  }
+  // gaps between blank cells (or the edge) that are too small for the shortest run
+  const gaps = segs.filter(([p, q]) => q - p < minL && !range(p, q - 1).some(x => v[x] === 1)).flatMap(([p, q]) => range(p, q - 1));
+  add(5, 241, [], gaps, () => t(241, "Look at {line}. Its shortest run is {min}, so no run fits in a gap of fewer cells between empty cells or the edge. Mark the cells in such gaps with <b>Blank</b>: {where}.", { line, min: minL, where: where(gaps) }));
+  // the known cells at both ends hold complete runs: the other runs fit in the open middle, like in an empty line
+  let p = 0, q = n;
+  while (p < n && v[p] !== -1) p++;
+  while (p > 0 && v[p - 1] === 1) p--;
+  while (q > 0 && v[q - 1] !== -1) q--;
+  while (q < n && v[q] === 1) q++;
+  if ((p > 0 || q < n) && p < q && range(p, q - 1).every(open)) {
+    const a = blocks.filter(([s]) => s < p).length, b = blocks.filter(([s]) => s >= q).length;
+    const sub = clue.slice(a, k - b), m = q - p, r = sub.length ? solveLine(new Int8Array(m).fill(-1), sub) : null;
+    if (r) {
+      const need2 = sub.reduce((x, y) => x + y, 0) + sub.length - 1, mid = range(p, q - 1);
+      const vars = () => ({ line, clue: nums(sub), L: sub[0], m, where: where(mid), need: need2, s: m - need2 });
+      const fill = mid.filter(x => r.res[x - p] === 1), blank = mid.filter(x => r.res[x - p] === 0);
+      if (sub.length === 1) add(6, need2 === m ? 265 : 264, fill, [], () => need2 === m
+        ? t(265, "Look at {line}. The runs among the known cells at its ends are complete (they end at an empty cell or the edge), so the run that is left ({L}) exactly fills {where}: fill it in.", vars())
+        : t(264, "Look at {line}. The runs among the known cells at its ends are complete (they end at an empty cell or the edge), so the run that is left ({L}) must lie in {where}: {m} cells. It can shift by at most {s}, so the cells it covers both when you push it to one side and to the other are colored for sure.", vars()));
+      else if (need2 === m) add(6, 245, fill, blank, () => t(245, "Look at {line}. The runs among the known cells at its ends are complete (they end at an empty cell or the edge), so the runs that are left ({clue}) must fit in {where}. With one empty cell between each two, they need exactly those {m} cells, so there is only one way to place them: fill them in.", vars()));
+      else add(6, 244, fill, [], () => t(244, "Look at {line}. The runs among the known cells at its ends are complete (they end at an empty cell or the edge), so the runs that are left ({clue}) must fit in {where}: {m} cells. They need at least {need}, with one empty cell between each two, so they can shift by at most {s}. Push them to one side, then to the other: the cells a run covers in both positions are colored for sure.", vars()));
+    }
+  }
+  // a colored cell so close to the start (or end) that it must belong to the first (or last) run: that run sticks to it
+  const firstC = v.indexOf(1), lastC = v.lastIndexOf(1);
+  if (firstC >= 0) {
+    let p0 = 0, q0 = n;
+    while (v[p0] === 0) p0++;
+    while (v[q0 - 1] === 0) q0--;
+    const L0 = clue[0], fill0 = range(firstC + 1, p0 + L0 - 1), blank0 = range(p0, firstC - L0), end0 = firstC === p0 && p0 + L0 < n ? [p0 + L0] : [];
+    const reach = bl => bl.some(open) ? " " + t(250, "Mark {where} with <b>Blank</b> too: that run can't reach that far.", { where: where(bl.filter(open)) }) : "";
+    if (firstC - p0 <= L0 && fill0.some(open)) add(7, 246, fill0, [...blank0, ...end0], () => t(246, "Look at {line}. The colored {cell} is so close to {bound} that no other run fits before it, so it belongs to the first run ({L}). That run can't start before {start}, so it reaches at least to {end}. Fill {fill}.", { line, cell: where([firstC]), bound: bound(p0 - 1), L: L0, start: where([p0]), end: where([p0 + L0 - 1]), fill: where(fill0.filter(open)) }) + reach(blank0) + closed(end0));
+    const L1 = clue[k - 1], fill1 = range(q0 - L1, lastC - 1), blank1 = range(lastC + L1, q0 - 1), end1 = lastC === q0 - 1 && q0 - L1 > 0 ? [q0 - L1 - 1] : [];
+    if (q0 - 1 - lastC <= L1 && fill1.some(open)) add(7, 247, fill1, [...blank1, ...end1], () => t(247, "Look at {line}. The colored {cell} is so close to {bound} that no other run fits after it, so it belongs to the last run ({L}). That run can't end after {end}, so it reaches back at least to {start}. Fill {fill}.", { line, cell: where([lastC]), bound: bound(q0), L: L1, end: where([q0 - 1]), start: where([q0 - L1]), fill: where(fill1.filter(open)) }) + reach(blank1) + closed(end1));
+  }
+  // a colored block whose run can't cross a blank cell or the edge nearby: the run stretches away from it
+  for (const [s, e] of blocks) {
+    const [p1, q1] = segOf(s), lens = coverOf(s).map(j => clue[j]), Lc = Math.min(...lens);
+    for (const [L, level, kind] of [[minL, 8, 251], [Lc, 10, lens.every(x => x === Lc) ? 252 : 253]]) {
+      const say = {
+        251: vars => t(251, "Look at {line}. The colored {cell} belongs to a run of at least {L} cells: that is the shortest run of this line. That run can't cross {bound}, so it reaches at least to {end}. Fill {fill}.", vars),
+        252: vars => t(252, "Look at {line}. The colored {cell} can only belong to a run of {L}: the other runs can't reach it. That run can't cross {bound}, so it reaches at least to {end}. Fill {fill}.", vars),
+        253: vars => t(253, "Look at {line}. The colored {cell} can only belong to a run of at least {L} cells: the shorter runs can't reach it. That run can't cross {bound}, so it reaches at least to {end}. Fill {fill}.", vars),
+      };
+      const left = range(e, p1 + L - 1), right = range(q1 - L, s - 1), exact = lens.every(x => x === L);
+      const endL = exact && s === p1 && p1 + L < n ? [p1 + L] : [], endR = exact && e === q1 && q1 - L > 0 ? [q1 - L - 1] : [];
+      if (left.some(open)) add(level, kind, left, endL, () => say[kind]({ line, cell: where([s]), L, bound: bound(p1 - 1), end: where([p1 + L - 1]), fill: where(left.filter(open)) }) + closed(endL));
+      if (right.some(open)) add(level, kind, right, endR, () => say[kind]({ line, cell: where([e - 1]), L, bound: bound(q1), end: where([q1 - L]), fill: where(right.filter(open)) }) + closed(endR));
+    }
+  }
+  // two colored blocks that only one and the same run can reach: join them
+  for (let b = 0; b + 1 < blocks.length; b++) {
+    const e1 = blocks[b][1], s2 = blocks[b + 1][0], c1 = coverOf(e1 - 1), c2 = coverOf(s2);
+    if (range(e1, s2 - 1).some(x => v[x] === 0) || c1.length !== 1 || c2.length !== 1 || c1[0] !== c2[0]) continue;
+    add(11, 254, range(e1, s2 - 1), [], () => t(254, "Look at {line}. Only {run} can reach the colored {cells}, so they belong to that same run. Fill the cells in between: {fill}.", { line, run: runName(c1[0]), cells: where([e1 - 1, s2]), fill: where(range(e1, s2 - 1)) }));
+  }
+  // where one run can still lie, and the cells it covers wherever it goes
+  clue.forEach((L, j) => {
+    const st = starts[j];
+    if (!st.length) return;
+    const a = st[0], b = st[st.length - 1], fill = range(b, a + L - 1);
+    const ends = [a - 1, a + L].filter(x => x >= 0 && x < n);
+    if (a === b) add(12, 266, fill, ends, () => t(266, "Look at {line}. Given the cells you already know, {run} fits in only one place: {fill}. Fill it in.", { line, run: runName(j), fill: where(fill) }) + closed(ends));
+    else add(12, 255, fill, [], () => t(255, "Look at {line}. Given the cells you already know, {run} can only lie somewhere in {range}. Wherever it goes in there, it covers {fill}.", { line, run: runName(j), range: where(range(a, b + L - 1)), fill: where(fill.filter(open)) }));
+  });
+  add(13, 258, [], blanks, () => t(258, "Look at {line}. Mark {where} with <b>Blank</b>: given the cells you already know, no run can reach there anymore. No run fits there, or none reaches that far.", { line, where: where(blanks) }));
+  add(14, 235, fills, [], () => t(235, "Look at {line} and the cells you already know in it (colored or empty). Try where each run can still go: a cell that is colored in every possible position must be filled. Start from the ends of the line, and from the largest run.", { line }));
+  return best;
+}
+// the line with the easiest explanation that yields a new cell, like a player would: { idx, at, ...explainLine } or null
 function easiestLine() {
   const W = cur.width, H = cur.height;
   let best = null;
   for (let idx = 0; idx < W + H; idx++) {
-    const at = lineCells(idx), line = Int8Array.from(at, i => cells[i] === 1 ? 1 : cells[i] === 2 ? 0 : -1);
-    const out = solveLine(line, idx < H ? cur.rows[idx] : cur.cols[idx - H]);
-    if (!out) continue;
-    // crosses are not needed to win, so prefer lines that reveal a cell to fill
-    const fills = at.filter((i, x) => line[x] === -1 && out.res[x] === 1);
-    const gains = fills.length ? fills : at.filter((i, x) => line[x] === -1 && out.res[x] === 0);
-    if (!gains.length) continue;
-    const rank = (fills.length ? 0 : 1e12) + out.count;
-    if (!best || rank < best.rank) best = { rank, gains, fills: fills.length > 0, at, row: idx < H, idx };
+    const ex = explainLine(idx);
+    if (!ex) continue;
+    // crosses are not needed to win, so prefer lines that reveal a cell to fill; then the easiest explanation,
+    // the one that proves the most cells (fewer tips to finish a puzzle) and the line with the fewest solutions
+    const more = ex.set.length - (best ? best.set.length : 0);
+    if (!best || (ex.fills && !best.fills) || (ex.fills === best.fills && (ex.level < best.level
+      || (ex.level === best.level && (more > 0 || (more === 0 && ex.count < best.count)))))) {
+      best = { ...ex, idx, at: lineCells(idx) };
+    }
   }
   return best;
 }
@@ -2225,48 +2488,35 @@ function wrongCells() {
 $("hintBtn").onclick = () => {
   if (!cur || solved) return;
   const wrong = wrongCells();
-  if (wrong.length) {
-    undoStack.push(cells.slice());
-    startTimer();
-    bumpHints();
-    const i = wrong[Math.floor(Math.random() * wrong.length)];
-    cells[i] = 0;
-    focusCell = i;
-    showFlash(new Set([i]), css("--bad"));
-    toast(wrong.length === 1 ? t(38, "This cell was wrong. It has been cleared.") : t(39, "This cell was wrong ({n} mistakes in total). It has been cleared.", { n: wrong.length }), 3000);
-    persist();
-    return;
-  }
-  // in the practice puzzle, the bulb first explains a line; the player then chooses to get a cell or try alone
-  if (isPractice()) { openTip(); return; }
+  // with mistakes, tips would build on wrong cells: the bulb says how many there are, the player chooses to clear one
+  if (wrong.length) { openMistakes(wrong.length); return; }
+  // the bulb first explains a line; the player then chooses to get a cell or try alone
+  if (openTip()) return;
+  // no line gives progress by logic alone (should not happen): reveal a random cell, as before
+  const open = [];
+  for (let k = 0; k < cur.width * cur.height; k++) if (cells[k] === 0) open.push(k);
+  if (!open.length) return;
+  const i = open[Math.floor(Math.random() * open.length)];
   undoStack.push(cells.slice());
   startTimer();
   bumpHints();
-  const best = easiestLine();
-  let i;
-  if (best) {
-    i = best.gains[Math.floor(best.gains.length / 2)];
-    toast(best.row ? t(40, "Look at this row.") : t(41, "Look at this column."));
-  } else {
-    const open = [];
-    for (let k = 0; k < cur.width * cur.height; k++) if (cells[k] === 0) open.push(k);
-    if (!open.length) return;
-    i = open[Math.floor(Math.random() * open.length)];
-  }
   cells[i] = cur.sol[i] ? 1 : 2;
   focusCell = i;
-  showFlash(new Set(best ? best.at : [i]), css("--blue"));
+  showFlash(new Set([i]), css("--blue"));
   persist();
   checkWin();
 };
 
-// tips in the practice puzzle: first the three lines a beginner can solve on their own (found by their clue,
-// so they are skipped when the practice puzzle changes), then any line, with a general explanation
-let tip = null;   // { idx, at, targets }: the line that is explained and the cells it proves
+// tips: the bulb points at the easiest line that gives progress and explains the reasoning that fits it.
+// The practice puzzle first gets the three lines a beginner can solve on their own (found by their clue,
+// so they are skipped when the practice puzzle changes).
+let tip = null;   // { idx, at, targets, text }: the line that is explained and the cells its explanation proves;
+                  // { idx: -1, mistakes: n } while the bulb reports the player's mistakes
+let tipCounted = -1;   // the line of the last tip that counted as a hint, so reopening it does not count again
 const PRACTICE_TIPS = [
-  { row: false, clue: [2, 2], text: () => t(217, "Look at the column with <b>2 2</b>. Two blocks always need at least one blank cell between them, and this column has only 5 cells. So there is just one way: a block of 2 at the top, then one blank cell, then another block of 2.") },
-  { row: true, clue: [4], text: () => t(218, "Look at the row with <b>4</b>. It has only 5 cells, so wherever the block of 4 starts, it always covers cells 2, 3 and 4. You can fill those already. Whether cell 1 or cell 5 is colored, you don't know yet.") },
-  { row: false, clue: [3], text: () => t(219, "Look at the column with <b>3</b>. Just like the row with 4: the block of 3 can start at the top (cells 1 to 3) or end at the bottom (cells 3 to 5), the two extremes. Either way, cell 3 is colored. The rest of the block can't be filled with certainty yet, from this column alone.") },
+  { row: false, clue: [2, 2], text: () => t(217, "Look at the column with <b>2 2</b>. Two runs always need at least one empty cell between them, and this column has only 5 cells. So there is just one way: a run of 2 at the top, then one empty cell, then another run of 2.") },
+  { row: true, clue: [4], text: () => t(218, "Look at the row with <b>4</b>. It has only 5 cells, so wherever the run of 4 starts, it always covers cells 2, 3 and 4. You can fill those already. Whether cell 1 or cell 5 is colored, you don't know yet.") },
+  { row: false, clue: [3], text: () => t(219, "Look at the column with <b>3</b>. Just like the row with 4: the run of 3 can start at the top (cells 1 to 3) or end at the bottom (cells 3 to 5), the two extremes. Either way, cell 3 is colored. The rest of the run can't be filled with certainty yet, from this column alone.") },
 ];
 function findTip() {
   const W = cur.width, H = cur.height;
@@ -2282,43 +2532,104 @@ function findTip() {
   }
   const best = easiestLine();
   if (!best) return null;
-  const text = !best.fills && lineDone(best.idx)
-    ? (best.row ? t(220, "All blocks of this row are already colored, so its other cells stay blank. Mark them with <b>Blank</b>: that helps you with the columns.")
-      : t(221, "All blocks of this column are already colored, so its other cells stay blank. Mark them with <b>Blank</b>: that helps you with the rows."))
-    : (best.row ? t(222, "Look at this row. Compare its numbers with the cells you already know (colored or blank): some cells can only be one way.")
-      : t(223, "Look at this column. Compare its numbers with the cells you already know (colored or blank): some cells can only be one way."));
-  return { idx: best.idx, at: best.at, targets: best.gains, text };
+  return { idx: best.idx, at: best.at, targets: best.set.map(([x]) => best.at[x]), set: best.set, kind: best.kind, text: best.text() };
 }
+// how many cells the tip lets the player fill or mark: "This tip gives you 3 cells to fill and 2 cells to mark with Blank."
+function tipCount(tp) {
+  const fill = tp.set ? tp.set.filter(([, v]) => v === 1).length : tp.targets.length, blank = tp.set ? tp.set.length - fill : 0;
+  const parts = [];
+  if (fill) parts.push(fill === 1 ? t(277, "1 cell to fill") : t(278, "{n} cells to fill", { n: fill }));
+  if (blank) parts.push(blank === 1 ? t(279, "1 cell to mark with <b>Blank</b>") : t(280, "{n} cells to mark with <b>Blank</b>", { n: blank }));
+  if (!parts.length) return "";
+  return t(281, "This tip gives you {count}.", { count: parts.length > 1 ? t(282, "{a} and {b}", { a: parts[0], b: parts[1] }) : parts[0] });
+}
+// shows a tip; a tip counts as one hint (the cell the player may ask for comes with it); false when there is none
 function openTip() {
   tip = findTip();
-  if (!tip) return;
-  $("tipText").innerHTML = tip.text;
+  if (!tip) return false;
+  startTimer();
+  if (tip.idx !== tipCounted) { bumpHints(); tipCounted = tip.idx; persist(); }
+  $("tipText").innerHTML = tip.text + `<span class="tip-count">${tipCount(tip)}</span>`;
+  $("tipAsk").innerHTML = t(224, "Shall I fill in a cell for you?");
+  $("tipYes").innerHTML = t(225, "Yes, fill in a cell");
+  $("tipNo").innerHTML = t(226, "No, I'll try myself");
   $("tipBox").hidden = false;
   focusCell = -1;
+  if (zoom > 1) ensureVisible(tip.targets[0]);
   relayout();
+  return true;
+}
+// the mistakes box: opening it counts as one hint, which includes clearing the first mistake;
+// every further mistake the player asks to clear counts as one more hint
+let mistakeCredit = false;   // the first clearing of the open mistakes box is still unused
+function openMistakes(n) {
+  startTimer();
+  if (!(tip && tip.mistakes)) { bumpHints(); mistakeCredit = true; persist(); }
+  tip = { idx: -1, at: [], targets: [], mistakes: n };
+  focusCell = -1;
+  showMistakes(n, false);
+}
+function showMistakes(n, fixed) {
+  tip.mistakes = n;
+  $("tipText").innerHTML = fixed
+    ? fixed + " " + (n === 1 ? t(269, "You still have 1 mistake.") : t(270, "You still have {n} mistakes.", { n }))
+    : (n === 1 ? t(267, "You have 1 mistake.") : t(268, "You have {n} mistakes.", { n })) + " " + t(271, "A tip only works once all your cells are right.");
+  $("tipAsk").innerHTML = mistakeCredit ? t(285, "Shall I fix one of them for you?") : t(286, "Shall I fix another one? That counts as one more hint.");
+  $("tipYes").innerHTML = t(287, "Yes, fix one");
+  $("tipNo").innerHTML = t(275, "No, I'll look myself");
+  $("tipBox").hidden = false;
+  relayout();
+}
+// a wrong cell gets its right value: a wrongly colored cell becomes Blank, a wrong Blank becomes colored
+function clearMistake() {
+  const wrong = wrongCells();
+  if (!wrong.length) { closeTip(); return; }
+  if (mistakeCredit) mistakeCredit = false;
+  else bumpHints();
+  undoStack.push(cells.slice());
+  startTimer();
+  const i = wrong[Math.floor(Math.random() * wrong.length)];
+  cells[i] = cur.sol[i] ? 1 : 2;
+  focusCell = i;
+  showFlash(new Set([i]), css("--bad"));
+  persist();
+  const fixed = cells[i] === 1 ? t(284, "This cell was wrong: it is now colored.") : t(283, "This cell was wrong: it is now marked <b>Blank</b>.");
+  if (wrong.length > 1) { showMistakes(wrong.length - 1, fixed); return; }
+  closeTip();
+  checkWin();
+  if (!solved) toast(fixed.replace(/<[^>]+>/g, "") + " " + t(276, "That was your last mistake: tap the bulb again for a tip."), 3500);
 }
 function closeTip() {
   if (!tip) return;
   tip = null;
+  mistakeCredit = false;
   $("tipBox").hidden = true;
   relayout();
 }
 // called after every move: the tip closes once the player has found its cells
 function checkTip() {
+  if (tip && tip.mistakes) {
+    const n = wrongCells().length;
+    if (!n) { closeTip(); toast(t(227, "Well done!")); }
+    else if (n !== tip.mistakes) showMistakes(n, false);
+    return;
+  }
   if (!tip || !tip.targets.every(i => cells[i] === (cur.sol[i] ? 1 : 2))) return;
+  tipCounted = -1;
   closeTip();
   if (!solved) toast(t(227, "Well done!"));
 }
 $("tipNo").onclick = closeTip;
 $("tipYes").onclick = () => {
   if (!tip || !cur || solved) return;
+  if (tip.mistakes) { clearMistake(); return; }
   const open = tip.targets.filter(i => cells[i] !== (cur.sol[i] ? 1 : 2));
   closeTip();
   if (!open.length) return;
   const i = open[Math.floor(open.length / 2)];
+  tipCounted = -1;   // the cell was the help of this tip: asking about the same line again is a new hint
   undoStack.push(cells.slice());
   startTimer();
-  bumpHints();
   cells[i] = cur.sol[i] ? 1 : 2;
   focusCell = i;
   showFlash(new Set([i]), css("--blue"));
@@ -2654,7 +2965,7 @@ async function showCommunity(p, myTime, myHints) {
       Promise.all(["0", "1", "2-or-more"].map(h => gcCount(`solved/${p.id}/hints-${h}`))),
     ]);
     if (cur !== p) return;
-    html += t(76, "Solved by <b>{n}</b> players.", { n: solved.toLocaleString(locale) });
+    html += t(76, "Solved by <b>{n}</b> players.", { n: fmtNum(solved) });
     const tTotal = times.reduce((a, b) => a + (b || 0), 0);
     if (tTotal >= 3) {
       let acc = 0, mid = 0;
@@ -2786,8 +3097,8 @@ function showTogether(tg) {
   const h = tg.minutes / 60, hours = h >= 2;
   const score = (n, label) => `<div><b>${n}</b><small>${label}</small></div>`;
   box.innerHTML = `<div class="head">${t(179, "All players so far")}</div><div class="scores">` +
-    score(tg.solves.toLocaleString(locale), t(180, "puzzles solved")) +
-    score(Math.round(hours ? h : tg.minutes).toLocaleString(locale), hours ? t(181, "hours of puzzling") : t(187, "minutes of puzzling")) +
+    score(fmtNum(tg.solves), t(180, "puzzles solved")) +
+    score(fmtNum(hours ? h : tg.minutes), hours ? t(181, "hours of puzzling") : t(187, "minutes of puzzling")) +
     score(tg.papers, tg.papers === 1 ? t(188, "cancer research paper in the spotlight") : t(182, "cancer research papers in the spotlight")) + "</div>";
 }
 // called at start and each time the game comes back to the foreground

@@ -31,7 +31,7 @@ Each puzzle shows the authors, the journal and the license of the original figur
 
 - Your progress, statistics and language choice are stored only on your own device, in your browser.
 - CRIGram counts anonymous plays with [GoatCounter](https://www.goatcounter.com) to see which puzzles are popular. It uses no cookies and collects no personal data.
-- Feedback and sign-ups for CRIG news go through a Microsoft Forms form at Ghent University, and only when you choose to fill it in.
+- Feedback goes through a form on [Fillout](https://www.fillout.com) (crigram.zite.so), and only when you choose to fill it in.
 
 ## About
 
@@ -49,4 +49,4 @@ Why a cancer research institute makes a puzzle game: [Why we turned our cancer r
 
 ## Feedback
 
-Ideas, questions or a figure you would like to see as a puzzle? Use **Feedback & CRIG news** in the game. Enjoying CRIGram and want to support the research behind it? Use **Donate** in the game.
+Ideas, questions or a figure you would like to see as a puzzle? Use **Feedback** in the game. Enjoying CRIGram and want to support the research behind it? Use **Donate** in the game.

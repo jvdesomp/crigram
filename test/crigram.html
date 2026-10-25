@@ -302,7 +302,7 @@
     <div class="links">
       <button class="link" id="howBtn" data-t="27">How to play</button>
       <button class="link" id="reminderLink" data-t="28">Weekly reminder</button>
-      <a class="link" id="feedbackLink" href="#" target="_blank" rel="noopener" hidden data-t="23">Feedback &amp; CRIG news</a>
+      <a class="link" id="feedbackLink" href="#" target="_blank" rel="noopener" hidden data-t="23">Feedback</a>
       <button class="link" id="milestonesBtn" hidden data-t="228">Milestones</button>
       <button class="link" id="installBtn" hidden data-t="29">Install app</button>
       <!-- only for opening the game as a local file on a computer, when testing -->
@@ -792,10 +792,10 @@ function releaseTime(p) {
 
 // ---------- settings ----------
 // goatcounter: the code of a GoatCounter site (https://CODE.goatcounter.com), empty = no counting
-// feedbackUrl: a link to a feedback form (e.g. Microsoft Forms), empty = no link
+// feedbackUrl: a link to the feedback form (Fillout, since 25 October 2026; ?lang=nl or ?lang=en is added), empty = no link
 const CONFIG = {
   goatcounter: "crigram",
-  feedbackUrl: "https://forms.cloud.microsoft/e/20qznW8iRE",
+  feedbackUrl: "https://crigram.zite.so/",
   // donateUrl: the UGent donation form for CRIG, empty = no donate button
   donateUrl: "https://actieplatform.ugent.be/en-GB/p/donatieformulier-87a9eb5ec/step-1",
 };
@@ -845,7 +845,7 @@ nl: {
   17: "Nieuw sedert je laatste bezoek: <b>puzzel {n}</b>.",
   18: "<b>{n} nieuwe puzzels</b> sedert je laatste bezoek.",
   20: "Sluiten",
-  23: "Feedback & CRIG-nieuws",
+  23: "Feedback",
   24: "De puzzel is gratis, maar kankeronderzoek is duur. Speel je graag CRIGram? Overweeg dan om ons onderzoek te steunen.",
   25: "♥ Doneer",
   27: "Hoe speel je?",
@@ -1089,6 +1089,7 @@ function ptext(p, field) {
   return (tr && tr[field]) || p[field] || "";
 }
 const levelName = d => ({ easy: t(31, "easy"), medium: t(32, "medium"), hard: t(33, "hard"), expert: t(34, "expert") })[d.label] || d.label;
+const feedbackUrl = () => `${CONFIG.feedbackUrl.replace(/\/?$/, "/")}?lang=${lang}`;   // the form in the player's language
 const donateUrl = () => CONFIG.donateUrl.replace("/en-GB/", "/" + (lang === "nl" ? "nl-BE" : "en-GB") + "/");
 // the texts in the page itself: data-t="n" for an element's content, data-ta="n" for its aria-label or alt text
 function applyTexts() {
@@ -1107,6 +1108,7 @@ function applyTexts() {
     el.innerHTML = LANGS.map(l => `<button data-lang="${l}" aria-pressed="${l === lang}">${l.toUpperCase()}</button>`).join("<span>·</span>");
   });
   if (CONFIG.donateUrl) document.getElementById("donateLink").href = donateUrl();
+  if (CONFIG.feedbackUrl) document.getElementById("feedbackLink").href = feedbackUrl();
 }
 document.addEventListener("click", e => {
   const b = e.target.closest(".lang-switch button");
@@ -2828,7 +2830,7 @@ function showWin(revisit) {
     ${CONFIG.donateUrl && !isPractice() ? `<section class="box donate-box"><p>${t(24, "The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.")}</p><a class="btn donate" id="winDonate" href="${escapeHtml(donateUrl())}" target="_blank" rel="noopener">${t(25, "♥ Donate")}</a></section>` : ""}
     <nav class="footer-links">
       <button class="link" id="reminderLink2">${t(28, "Weekly reminder")}</button>
-      ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(CONFIG.feedbackUrl)}" target="_blank" rel="noopener">${t(23, "Feedback &amp; CRIG news")}</a>` : ""}
+      ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(feedbackUrl())}" target="_blank" rel="noopener">${t(23, "Feedback")}</a>` : ""}
     </nav>
     <p class="license-note">${licenseLine(s)}</p>`;
   showScreen("result");
@@ -3221,7 +3223,7 @@ $("installCopy").onclick = async () => {
 if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).catch(() => {}));
 }
-if (CONFIG.feedbackUrl) { $("feedbackLink").href = CONFIG.feedbackUrl; $("feedbackLink").hidden = false; }
+if (CONFIG.feedbackUrl) { $("feedbackLink").href = feedbackUrl(); $("feedbackLink").hidden = false; }
 $("feedbackLink").addEventListener("click", () => track("feedback", "Feedback form opened"));
 if (CONFIG.donateUrl) { $("donateLink").href = CONFIG.donateUrl; $("donateCard").hidden = false; }
 $("donateLink").addEventListener("click", () => track("donate", "Donate button clicked (home)"));

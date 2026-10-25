@@ -175,6 +175,7 @@
   /* practice puzzle: a tip about one line, between the grid and the tool bar */
   .tip-box { flex: none; box-sizing: border-box; width: calc(100% - 24px); max-width: 560px; margin: 0 auto 10px; padding: 10px 14px 12px; border-radius: 12px; background: var(--blue-soft); font-size: 14px; line-height: 1.4; -webkit-user-select: text; user-select: text; }
   .tip-box p { margin: 4px 0 8px; }
+  .tip-box .tip-count { display: block; margin-top: 6px; }
   .tip-box .tip-ask { font-weight: 600; margin-bottom: 8px; }
   .tip-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .tip-actions .btn { flex: 1 1 140px; }
@@ -857,7 +858,6 @@ nl: {
   35: "Kleur",
   36: "Leeg",
   37: "Deze puzzel opnieuw beginnen?",
-  38: "Dit vakje was fout. Het is gewist.",
   42: "Terug naar de puzzels",
   43: "Over deze figuur",
   44: "Ongedaan maken",
@@ -1063,11 +1063,19 @@ nl: {
   269: "Je hebt nog 1 fout.",
   270: "Je hebt nog {n} fouten.",
   271: "Een tip werkt pas als al je vakjes kloppen.",
-  272: "Zal ik er een voor je weghalen?",
-  273: "Zal ik er nog een weghalen? Dat telt als een extra hint.",
-  274: "Ja, haal er een weg",
   275: "Nee, ik zoek zelf",
   276: "Dat was je laatste fout: tik opnieuw op het lampje voor een tip.",
+  277: "1 vakje om in te kleuren",
+  278: "{n} vakjes om in te kleuren",
+  279: "1 vakje om aan te duiden met <b>Leeg</b>",
+  280: "{n} vakjes om aan te duiden met <b>Leeg</b>",
+  281: "Met deze tip vind je {count}.",
+  282: "{a} en {b}",
+  283: "Dit vakje was fout: het is nu aangeduid met <b>Leeg</b>.",
+  284: "Dit vakje was fout: het is nu gekleurd.",
+  285: "Zal ik er een voor je verbeteren?",
+  286: "Zal ik er nog een verbeteren? Dat telt als een extra hint.",
+  287: "Ja, verbeter er een",
 },
 // </texts>
 };
@@ -2526,13 +2534,22 @@ function findTip() {
   if (!best) return null;
   return { idx: best.idx, at: best.at, targets: best.set.map(([x]) => best.at[x]), set: best.set, kind: best.kind, text: best.text() };
 }
+// how many cells the tip lets the player fill or mark: "This tip gives you 3 cells to fill and 2 cells to mark with Blank."
+function tipCount(tp) {
+  const fill = tp.set ? tp.set.filter(([, v]) => v === 1).length : tp.targets.length, blank = tp.set ? tp.set.length - fill : 0;
+  const parts = [];
+  if (fill) parts.push(fill === 1 ? t(277, "1 cell to fill") : t(278, "{n} cells to fill", { n: fill }));
+  if (blank) parts.push(blank === 1 ? t(279, "1 cell to mark with <b>Blank</b>") : t(280, "{n} cells to mark with <b>Blank</b>", { n: blank }));
+  if (!parts.length) return "";
+  return t(281, "This tip gives you {count}.", { count: parts.length > 1 ? t(282, "{a} and {b}", { a: parts[0], b: parts[1] }) : parts[0] });
+}
 // shows a tip; a tip counts as one hint (the cell the player may ask for comes with it); false when there is none
 function openTip() {
   tip = findTip();
   if (!tip) return false;
   startTimer();
   if (tip.idx !== tipCounted) { bumpHints(); tipCounted = tip.idx; persist(); }
-  $("tipText").innerHTML = tip.text;
+  $("tipText").innerHTML = tip.text + `<span class="tip-count">${tipCount(tip)}</span>`;
   $("tipAsk").innerHTML = t(224, "Shall I fill in a cell for you?");
   $("tipYes").innerHTML = t(225, "Yes, fill in a cell");
   $("tipNo").innerHTML = t(226, "No, I'll try myself");
@@ -2552,17 +2569,18 @@ function openMistakes(n) {
   focusCell = -1;
   showMistakes(n, false);
 }
-function showMistakes(n, cleared) {
+function showMistakes(n, fixed) {
   tip.mistakes = n;
-  $("tipText").innerHTML = cleared
-    ? t(38, "This cell was wrong. It has been cleared.") + " " + (n === 1 ? t(269, "You still have 1 mistake.") : t(270, "You still have {n} mistakes.", { n }))
+  $("tipText").innerHTML = fixed
+    ? fixed + " " + (n === 1 ? t(269, "You still have 1 mistake.") : t(270, "You still have {n} mistakes.", { n }))
     : (n === 1 ? t(267, "You have 1 mistake.") : t(268, "You have {n} mistakes.", { n })) + " " + t(271, "A tip only works once all your cells are right.");
-  $("tipAsk").innerHTML = mistakeCredit ? t(272, "Shall I clear one of them for you?") : t(273, "Shall I clear another one? That counts as one more hint.");
-  $("tipYes").innerHTML = t(274, "Yes, clear one");
+  $("tipAsk").innerHTML = mistakeCredit ? t(285, "Shall I fix one of them for you?") : t(286, "Shall I fix another one? That counts as one more hint.");
+  $("tipYes").innerHTML = t(287, "Yes, fix one");
   $("tipNo").innerHTML = t(275, "No, I'll look myself");
   $("tipBox").hidden = false;
   relayout();
 }
+// a wrong cell gets its right value: a wrongly colored cell becomes Blank, a wrong Blank becomes colored
 function clearMistake() {
   const wrong = wrongCells();
   if (!wrong.length) { closeTip(); return; }
@@ -2571,13 +2589,15 @@ function clearMistake() {
   undoStack.push(cells.slice());
   startTimer();
   const i = wrong[Math.floor(Math.random() * wrong.length)];
-  cells[i] = 0;
+  cells[i] = cur.sol[i] ? 1 : 2;
   focusCell = i;
   showFlash(new Set([i]), css("--bad"));
   persist();
-  if (wrong.length > 1) { showMistakes(wrong.length - 1, true); return; }
+  const fixed = cells[i] === 1 ? t(284, "This cell was wrong: it is now colored.") : t(283, "This cell was wrong: it is now marked <b>Blank</b>.");
+  if (wrong.length > 1) { showMistakes(wrong.length - 1, fixed); return; }
   closeTip();
-  toast(t(38, "This cell was wrong. It has been cleared.") + " " + t(276, "That was your last mistake: tap the bulb again for a tip."), 3500);
+  checkWin();
+  if (!solved) toast(fixed.replace(/<[^>]+>/g, "") + " " + t(276, "That was your last mistake: tap the bulb again for a tip."), 3500);
 }
 function closeTip() {
   if (!tip) return;

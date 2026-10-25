@@ -1,7 +1,7 @@
 {
  "format": "crigram-game",
  "version": 3,
- "published": "2026-10-24T10:42:37.858Z",
+ "published": "2026-10-25T10:39:53.291Z",
  "puzzles": [
   {
    "id": "p1acwx1r",
@@ -1727,6 +1727,11 @@
   }
  ],
  "milestones": [
+  {
+   "date": "2026-10-25",
+   "en": "The bulb now explains a next step: which line to look at, and why. Made a mistake? It tells you how many, and you choose whether to clear one.",
+   "nl": "Het lampje legt nu een volgende stap uit: naar welke lijn je moet kijken, en waarom. Een fout gemaakt? Het zegt hoeveel, en jij kiest of het er een weghaalt."
+  },
   {
    "date": "2026-10-20",
    "en": "Together you've solved 200 puzzles, in CRIGram's first 9 days.",

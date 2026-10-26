@@ -1,7 +1,7 @@
 {
  "format": "crigram-game",
  "version": 3,
- "published": "2026-10-26T16:01:46.985Z",
+ "published": "2026-10-26T16:29:58.925Z",
  "puzzles": [
   {
    "id": "p1acwx1r",
@@ -1729,8 +1729,8 @@
  "milestones": [
   {
    "date": "2026-10-25",
-   "en": "The bulb now explains a next step: which line to look at, and why. Made a mistake? It tells you how many, and you choose whether to correct one.",
-   "nl": "Het lampje legt nu een volgende stap uit: naar welke lijn je moet kijken, en waarom. Een fout gemaakt? Het zegt hoeveel, en jij kiest of het er een corrigeert."
+   "en": "The lightbulb (hint) has become smarter and now explains the next step: which row or column to look at and why. It also tells you if you've made a mistake, but leaves it up to you whether to correct it.",
+   "nl": "Het lampje (hint) is slimmer geworden en legt een volgende stap uit: welke lijn je moet bekijken en waarom. Het lampje laat ook weten of je een fout hebt gemaakt, waarbij jij kiest of de fout moet worden rechtgezet."
   },
   {
    "date": "2026-10-20",

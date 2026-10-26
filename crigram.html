@@ -796,8 +796,11 @@ function releaseTime(p) {
 const CONFIG = {
   goatcounter: "crigram",
   feedbackUrl: "https://crigram.zite.so/",
-  // donateUrl: the UGent donation form for CRIG, empty = no donate button
-  donateUrl: "https://actieplatform.ugent.be/en-GB/p/donatieformulier-87a9eb5ec/step-1",
+  // donateUrl: the UGent donation form for CRIGram, one link per language; empty = no donate button
+  donateUrl: {
+    en: "https://actieplatform.ugent.be/en-GB/p/donatieformulier-87a9eb5ec/step-1",
+    nl: "https://actieplatform.ugent.be/nl-BE/p/donatieformulier-87a9eb5ec/step-1",
+  },
 };
 
 // ---------- languages ----------
@@ -1090,7 +1093,7 @@ function ptext(p, field) {
 }
 const levelName = d => ({ easy: t(31, "easy"), medium: t(32, "medium"), hard: t(33, "hard"), expert: t(34, "expert") })[d.label] || d.label;
 const feedbackUrl = () => `${CONFIG.feedbackUrl.replace(/\/?$/, "/")}?lang=${lang}`;   // the form in the player's language
-const donateUrl = () => CONFIG.donateUrl.replace("/en-GB/", "/" + (lang === "nl" ? "nl-BE" : "en-GB") + "/");
+const donateUrl = () => CONFIG.donateUrl[lang] || CONFIG.donateUrl.en;
 // the texts in the page itself: data-t="n" for an element's content, data-ta="n" for its aria-label or alt text
 function applyTexts() {
   document.documentElement.lang = lang;
@@ -3225,7 +3228,7 @@ if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) {
 }
 if (CONFIG.feedbackUrl) { $("feedbackLink").href = feedbackUrl(); $("feedbackLink").hidden = false; }
 $("feedbackLink").addEventListener("click", () => track("feedback", "Feedback form opened"));
-if (CONFIG.donateUrl) { $("donateLink").href = CONFIG.donateUrl; $("donateCard").hidden = false; }
+if (CONFIG.donateUrl) { $("donateLink").href = donateUrl(); $("donateCard").hidden = false; }
 $("donateLink").addEventListener("click", () => track("donate", "Donate button clicked (home)"));
 setupCounting();
 

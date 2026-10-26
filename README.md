@@ -2,7 +2,7 @@
 
 *Cell by cell, decoding our science.*
 
-**Play:** https://jvdesomp.github.io/crigram/ (in English or Dutch)
+**Play:** https://www.crig.ugent.be/crigram (in English or Dutch)
 
 CRIGram is a free picture logic puzzle (a nonogram) built from figures in research papers of the [Cancer Research Institute Ghent (CRIG)](https://www.crig.ugent.be). Most puzzles hide a detail of a real figure. Solve the grid and the original figure appears, together with a plain-language summary of the research and a link to the paper. Now and then a puzzle is about CRIG itself, such as an event or an anniversary.
 
@@ -21,7 +21,7 @@ CRIGram works in any modern browser and can be installed as an app on your phone
 
 ## Languages
 
-CRIGram speaks English and Dutch. It follows the language of your browser (on a phone: the language of your phone), and you can switch with **EN · NL** at the top of the home screen or in How to play. A link can ask for Dutch with `?lang=nl`, for example https://jvdesomp.github.io/crigram/?lang=nl. The puzzles, your progress and your streak are the same in both languages.
+CRIGram speaks English and Dutch. It follows the language of your browser (on a phone: the language of your phone), and you can switch with **EN · NL** at the top of the home screen or in How to play. A link can ask for Dutch with `?lang=nl`, for example https://www.crig.ugent.be/crigram?lang=nl. The puzzles, your progress and your streak are the same in both languages.
 
 ## The science behind the puzzles
 

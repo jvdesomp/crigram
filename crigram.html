@@ -296,7 +296,7 @@
       <button class="btn primary" id="openFileBtn">Open puzzle file</button>
     </div>
     <div class="feedback-card" id="donateCard" hidden>
-      <div style="flex:1 1 220px"><span data-t="24">The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.</span></div>
+      <div style="flex:1 1 220px"><span data-t="24">The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research (tax deductible in Belgium).</span></div>
       <a class="btn donate" id="donateLink" href="#" target="_blank" rel="noopener" data-t="25">♥ Donate</a>
     </div>
     <div class="links">
@@ -852,7 +852,7 @@ nl: {
   18: "<b>{n} nieuwe puzzels</b> sedert je laatste bezoek.",
   20: "Sluiten",
   23: "Feedback",
-  24: "De puzzel is gratis, maar kankeronderzoek is duur. Speel je graag CRIGram? Overweeg dan om ons onderzoek te steunen.",
+  24: "De puzzel is gratis, maar kankeronderzoek is duur. Speel je graag CRIGram? Overweeg dan om ons onderzoek te steunen (met fiscaal attest vanaf € 40).",
   25: "♥ Doneer",
   27: "Hoe speel je?",
   28: "Wekelijkse herinnering",
@@ -2833,7 +2833,7 @@ function showWin(revisit) {
     </section>
     ${next >= 0 ? `<button class="btn primary wide" id="winNext">${t(66, "Next puzzle")}</button>`
       : `<p class="done-note">${nextRelease ? t(68, "You've solved all puzzles. The next one arrives {date}.", { date: whenText(nextRelease).abs }) : t(67, "You've solved all puzzles.")}</p>`}
-    ${CONFIG.donateUrl && !isPractice() ? `<section class="box donate-box"><p>${t(24, "The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research.")}</p><a class="btn donate" id="winDonate" href="${escapeHtml(donateUrl())}" target="_blank" rel="noopener">${t(25, "♥ Donate")}</a></section>` : ""}
+    ${CONFIG.donateUrl && !isPractice() ? `<section class="box donate-box"><p>${t(24, "The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research (tax deductible in Belgium).")}</p><a class="btn donate" id="winDonate" href="${escapeHtml(donateUrl())}" target="_blank" rel="noopener">${t(25, "♥ Donate")}</a></section>` : ""}
     <nav class="footer-links">
       <button class="link" id="reminderLink2">${t(28, "Weekly reminder")}</button>
       ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(feedbackUrl())}" target="_blank" rel="noopener">${t(23, "Feedback")}</a>` : ""}

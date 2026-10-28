@@ -1,7 +1,7 @@
 {
  "format": "crigram-game",
  "version": 3,
- "published": "2026-10-28T08:53:06.963Z",
+ "published": "2026-10-28T21:59:45.795Z",
  "puzzles": [
   {
    "id": "p1acwx1r",
@@ -2034,6 +2034,11 @@
   }
  ],
  "milestones": [
+  {
+   "date": "2026-10-27",
+   "en": "CRIGram puzzles have been solved in 10 different countries.",
+   "nl": "CRIGram puzzels zijn al in 10 verschillende landen opgelost."
+  },
   {
    "date": "2026-10-25",
    "en": "The lightbulb (hint) has become smarter and now explains the next step: which row or column to look at and why. It also tells you if you've made a mistake, but leaves it up to you whether to correct it.",

@@ -281,6 +281,7 @@
     <div class="lang-switch hero-lang" role="group" aria-label="Language"></div>
   </div>
   <div class="wrap">
+    <div id="inAppNotice" class="notice" hidden role="status"><span id="inAppText"></span><button id="inAppClose" aria-label="Dismiss" data-ta="20">×</button></div>
     <div id="notice" class="notice" hidden role="status"><span id="noticeText"></span><button id="noticeClose" aria-label="Dismiss" data-ta="20">×</button></div>
     <div id="nextUp" class="nextup" hidden></div>
     <div class="feedback-card practice-card" id="practiceCard" hidden>
@@ -1082,6 +1083,8 @@ nl: {
   285: "Zal ik er een voor je verbeteren?",
   286: "Zal ik er nog een verbeteren? Dat telt als een extra hint.",
   287: "Ja, verbeter er een",
+  288: "Je speelt in {app}. Wat je hier oplost, blijft in die app, en van hieruit kun je CRIGram niet installeren.",
+  289: "Zo open je CRIGram in {browser}",
 },
 // </texts>
 };
@@ -1128,6 +1131,7 @@ function setLang(l) {
   // everything on screen that the game wrote itself is written again
   renderHome();
   if (!$("notice").hidden) showNotice(noticeVisit);
+  showInAppNotice();
   showTogether(readJSON(TOGETHER_KEY, null));
   if ($("milestonesBg").classList.contains("show")) renderMilestones();
   const screen = document.querySelector(".screen.active").id;
@@ -1477,7 +1481,10 @@ const puzzleLabel = () => isPractice() ? t(149, "Practice puzzle") : t(10, "Puzz
 function renderPractice() {
   const pp = practice, prog = pp && progress[pp.id];
   const anySolved = puzzles.some(p => progress[p.id] && progress[p.id].solved);
-  $("practiceCard").hidden = !pp || !!(prog && prog.solved) || anySolved;
+  // one message at a time: the card waits until the notices are closed (the welcome leads to How to play,
+  // which ends with the practice puzzle)
+  const noticeUp = !$("notice").hidden || !$("inAppNotice").hidden;
+  $("practiceCard").hidden = !pp || !!(prog && prog.solved) || anySolved || noticeUp;
   $("howPracticeRow").hidden = !pp;
   if (!pp) return;
   const busy = prog && prog.cells && /[12]/.test(prog.cells);
@@ -1649,7 +1656,10 @@ function showNotice(prevVisit) {
   noticeVisit = prevVisit;
   let msg = pickNotice(prevVisit);
   try { if (msg && sessionStorage.getItem("crigram.dismissed") === msg) msg = null; } catch (e) { /* ignore */ }
+  // one notice at a time: inside LinkedIn and other apps, that one comes first
+  if (!$("inAppNotice").hidden) msg = null;
   $("notice").hidden = !msg;
+  renderPractice();
   if (!msg) return;
   $("noticeText").innerHTML = msg;
   const how = $("noticeText").querySelector("[data-how]");
@@ -1658,6 +1668,7 @@ function showNotice(prevVisit) {
 $("noticeClose").onclick = () => {
   try { sessionStorage.setItem("crigram.dismissed", $("noticeText").innerHTML); } catch (e) { /* ignore */ }
   $("notice").hidden = true;
+  renderPractice();
 };
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) { hiddenAt = Date.now(); markVisit(); return; }
@@ -3221,6 +3232,27 @@ function installHelp() {
     "Install steps opened" + (inApp ? " in " + (app || "another app") : ""));
   $("installBg").classList.add("show");
 }
+// inside such an app, the home screen says so at once: what the player solves there stays in that app.
+// Closing the notice hides it for good (in that app's storage)
+const IN_APP_KEY = "crigram.inAppClosed" + KEY_SUFFIX;
+function showInAppNotice() {
+  const app = inAppName();
+  let closed = false;
+  try { closed = !!localStorage.getItem(IN_APP_KEY); } catch (e) { /* ignore */ }
+  $("inAppNotice").hidden = app === null || closed;
+  if ($("inAppNotice").hidden) return;
+  const browser = IS_IOS ? "Safari" : "Chrome";
+  $("inAppText").innerHTML = t(288, "You're playing inside {app}. What you solve here stays in that app, and CRIGram can't be installed from here.", { app: app || t(209, "another app") })
+    + ` <button class="link" id="inAppHow">${t(289, "How to open it in {browser}", { browser })}</button>.`;
+  $("inAppHow").onclick = installHelp;
+}
+$("inAppClose").onclick = () => {
+  try { localStorage.setItem(IN_APP_KEY, new Date().toISOString()); } catch (e) { /* ignore */ }
+  $("inAppNotice").hidden = true;
+  if (noticeShown) showNotice(noticeVisit);   // the message it held back (e.g. the welcome), or else the practice card
+  else renderPractice();
+};
+showInAppNotice();
 $("installCopy").onclick = async () => {
   const link = location.origin + location.pathname.replace(/(index|crigram)\.html$/, "");
   const browser = IS_IOS ? "Safari" : "Chrome";

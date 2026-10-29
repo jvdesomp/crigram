@@ -1161,7 +1161,6 @@ const LINKED = (() => {
   } catch (e) { return null; }
 })();
 let linkTarget = null;   // the linked puzzle, opened after the practice puzzle
-let welcomeOpen = false; // the welcome leads to How to play, which ends with the practice puzzle, so no practice card then
 let playedSent = false;  // the "played" event goes once per visit
 const PUZZLES_KEY = "crigram.puzzles" + KEY_SUFFIX, PROGRESS_KEY = "crigram.progress" + KEY_SUFFIX;
 function readJSON(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
@@ -1482,7 +1481,10 @@ const puzzleLabel = () => isPractice() ? t(149, "Practice puzzle") : t(10, "Puzz
 function renderPractice() {
   const pp = practice, prog = pp && progress[pp.id];
   const anySolved = puzzles.some(p => progress[p.id] && progress[p.id].solved);
-  $("practiceCard").hidden = !pp || !!(prog && prog.solved) || anySolved || welcomeOpen;
+  // one message at a time: the card waits until the notices are closed (the welcome leads to How to play,
+  // which ends with the practice puzzle)
+  const noticeUp = !$("notice").hidden || !$("inAppNotice").hidden;
+  $("practiceCard").hidden = !pp || !!(prog && prog.solved) || anySolved || noticeUp;
   $("howPracticeRow").hidden = !pp;
   if (!pp) return;
   const busy = prog && prog.cells && /[12]/.test(prog.cells);
@@ -1655,7 +1657,6 @@ function showNotice(prevVisit) {
   let msg = pickNotice(prevVisit);
   try { if (msg && sessionStorage.getItem("crigram.dismissed") === msg) msg = null; } catch (e) { /* ignore */ }
   // one notice at a time: inside LinkedIn and other apps, that one comes first
-  welcomeOpen = !!msg && prevVisit === null;
   if (!$("inAppNotice").hidden) msg = null;
   $("notice").hidden = !msg;
   renderPractice();
@@ -1667,7 +1668,6 @@ function showNotice(prevVisit) {
 $("noticeClose").onclick = () => {
   try { sessionStorage.setItem("crigram.dismissed", $("noticeText").innerHTML); } catch (e) { /* ignore */ }
   $("notice").hidden = true;
-  welcomeOpen = false;
   renderPractice();
 };
 document.addEventListener("visibilitychange", () => {
@@ -3249,7 +3249,8 @@ function showInAppNotice() {
 $("inAppClose").onclick = () => {
   try { localStorage.setItem(IN_APP_KEY, new Date().toISOString()); } catch (e) { /* ignore */ }
   $("inAppNotice").hidden = true;
-  if (noticeShown) showNotice(noticeVisit);   // the message it held back (e.g. the welcome)
+  if (noticeShown) showNotice(noticeVisit);   // the message it held back (e.g. the welcome), or else the practice card
+  else renderPractice();
 };
 showInAppNotice();
 $("installCopy").onclick = async () => {

@@ -119,8 +119,11 @@
   .text-link { color: var(--blue); }
   a.btn.cta { display: block; margin-top: 14px; border: 1.5px solid var(--blue); color: var(--blue); font-weight: 600; }
   .license-note { color: var(--muted); font-size: 12px; text-align: center; margin: 14px 0 0; }
-  .paper-link { display: inline-block; margin-top: 8px; font-weight: 600; color: var(--blue); text-decoration: none; }
-  .result-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  /* the citation and "Read the paper" in the same layout as the result and its Share button; the button wraps under the text on narrow screens */
+  .research-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .research-row > div { flex: 1 1 260px; }
+  .research-row .btn, .result-row .btn, .donate-box .btn { margin-left: auto; white-space: nowrap; }
+  .result-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
   .result-row .solved { font-weight: 600; color: var(--ok); }
   .btn.slim { padding: 6px 14px; font-size: 14px; }
   .community-line { margin-top: 6px; color: var(--ink); }
@@ -886,7 +889,6 @@ nl: {
   62: "✓ Opgelost in {time} · zonder hints",
   63: "✓ Opgelost in {time} · 1 hint",
   64: "✓ Opgelost in {time} · {n} hints",
-  65: "Deel",
   66: "Volgende puzzel",
   67: "Je hebt alle puzzels opgelost.",
   68: "Je hebt alle puzzels opgelost. De volgende komt eraan op {date}.",
@@ -1085,6 +1087,7 @@ nl: {
   287: "Ja, verbeter er een",
   288: "Je speelt in {app}. Wat je hier oplost, blijft in die app, en van hieruit kun je CRIGram niet installeren.",
   289: "Zo open je CRIGram in {browser}",
+  290: "Deel deze puzzel",
 },
 // </texts>
 };
@@ -2753,8 +2756,8 @@ function researchHtml(s) {
   // no DOI as text ("Read the paper" links to it) and no licenses (they are a footnote at the bottom of the page)
   const link = paperLink(s);
   if (!parts.length && !link) return "";
-  return (parts.length ? `<div>${parts.join(". ")}.</div>` : "") +
-    (link ? `<a class="paper-link" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${t(59, "Read the paper ↗")}</a>` : "");
+  return `<div class="research-row">${parts.length ? `<div>${parts.join(". ")}.</div>` : ""}` +
+    (link ? `<a class="btn slim" id="paperBtn" href="${escapeHtml(link)}" target="_blank" rel="noopener">${t(59, "Read the paper ↗")}</a>` : "") + `</div>`;
 }
 // the licenses as one footnote at the bottom of the result page: the figure's (or image's) and the puzzle's own
 function licenseLine(s) {
@@ -2838,14 +2841,15 @@ function showWin(revisit) {
         <span class="solved">${hints === 0 ? t(62, "✓ Solved in {time} · no hints", { time: fmtTime(prog.time || 0) })
           : hints === 1 ? t(63, "✓ Solved in {time} · 1 hint", { time: fmtTime(prog.time || 0) })
           : t(64, "✓ Solved in {time} · {n} hints", { time: fmtTime(prog.time || 0), n: hints })}</span>
-        ${isPractice() ? "" : `<button class="btn slim" id="shareBtn">${t(65, "Share")}</button>`}
+        ${isPractice() ? "" : `<button class="btn slim" id="shareBtn">${t(290, "Share this puzzle")}</button>`}
       </div>
       <div class="community-line" id="community" hidden></div>
     </section>
-    ${next >= 0 ? `<button class="btn primary wide" id="winNext">${t(66, "Next puzzle")}</button>`
+    ${next >= 0 ? (isPractice() ? `<button class="btn primary wide" id="winNext">${t(66, "Next puzzle")}</button>` : "")
       : `<p class="done-note">${nextRelease ? t(68, "You've solved all puzzles. The next one arrives {date}.", { date: whenText(nextRelease).abs }) : t(67, "You've solved all puzzles.")}</p>`}
     ${CONFIG.donateUrl && !isPractice() ? `<section class="box donate-box"><p>${t(24, "The puzzle is free, but cancer research is expensive. If you enjoy playing CRIGram, please consider supporting our research (tax deductible in Belgium).")}</p><a class="btn donate" id="winDonate" href="${escapeHtml(donateUrl())}" target="_blank" rel="noopener">${t(25, "♥ Donate")}</a></section>` : ""}
     <nav class="footer-links">
+      ${next >= 0 && !isPractice() ? `<button class="link" id="winNext">${t(66, "Next puzzle")} →</button>` : ""}
       <button class="link" id="reminderLink2">${t(28, "Weekly reminder")}</button>
       ${CONFIG.feedbackUrl ? `<a class="link" href="${escapeHtml(feedbackUrl())}" target="_blank" rel="noopener">${t(23, "Feedback")}</a>` : ""}
     </nav>
@@ -2865,7 +2869,11 @@ function showWin(revisit) {
     ? track(`link/${cur.id}`, `Puzzle ${curIndex + 1} link opened · ${cur.title}`)
     : track(`paper/${cur.id}`, `Puzzle ${curIndex + 1} paper opened · ${cur.title}`));
   $("winGrid").onclick = () => { showScreen("play"); sizeBoard(); drawBoard(); };
-  if (next >= 0) $("winNext").onclick = () => { persist(); openPuzzle(next); };
+  // only regular puzzles show "Next puzzle" as a small footer link; count its use to see whether it is worth keeping
+  if (next >= 0) $("winNext").onclick = () => {
+    if (!isPractice()) track("next", "Next puzzle clicked (result page)");
+    persist(); openPuzzle(next);
+  };
 }
 $("resultBack").onclick = leavePuzzle;
 

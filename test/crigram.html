@@ -200,6 +200,8 @@
   .sheet img { width: 100%; border-radius: 10px; margin: 6px 0 10px; background: #fff; }
   .sheet .actions { display: flex; gap: 10px; margin-top: 16px; }
   .sheet .actions .btn { flex: 1; }
+  .sheet-close { text-align: center; margin-top: 10px; }
+  .sheet-close .link { padding: 8px 16px; }   /* a small link, but still easy to tap */
   .sheet h3 { margin: 14px 0 6px; font-size: 16px; }
   /* milestones: a small timeline, newest first, one dot per item in the CRIG colors */
   .milestones { list-style: none; padding: 0; margin: 10px 0 4px; }
@@ -432,7 +434,7 @@
 </div>
 <div class="sheet-bg" id="shareBg">
   <div class="sheet">
-    <h2 data-t="93">Share your result</h2>
+    <h2 data-t="290">Share this puzzle</h2>
     <img class="share-preview" id="sharePreview" alt="Your CRIGram result card" data-ta="101">
     <div class="sub" id="shareText"></div>
     <div class="actions" id="shareNative">
@@ -443,14 +445,14 @@
       <button class="btn" id="shareCopy" data-t="96">Copy text</button>
       <a class="btn" id="shareDownload" download="crigram-result.png" data-t="97">Download image</a>
     </div>
-    <div class="actions" style="margin-top:8px"><button class="btn" data-close data-t="98">Close</button></div>
+    <div class="sheet-close"><button class="link" data-close data-t="98">Close</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="milestonesBg">
   <div class="sheet">
     <h2 data-t="228">Milestones</h2>
     <ul class="milestones" id="milestonesList"></ul>
-    <div class="actions" style="margin-top:8px"><button class="btn" data-close data-t="98">Close</button></div>
+    <div class="sheet-close"><button class="link" data-close data-t="98">Close</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="reminderBg">
@@ -463,7 +465,7 @@
       <a class="btn" id="remFile" href="crigram-weekly.ics" download="crigram-weekly.ics" data-t="125">Other calendars (download file)</a>
     </div>
     <p class="sub" style="margin-top:12px" data-t="126">On a Mac, Calendar asks how to subscribe: untick <b>Remove alerts</b> if you want a notification.</p>
-    <div class="actions" style="margin-top:4px"><button class="btn" data-close data-t="98">Close</button></div>
+    <div class="sheet-close"><button class="link" data-close data-t="98">Close</button></div>
   </div>
 </div>
 <div class="sheet-bg" id="howBg">
@@ -910,7 +912,6 @@ nl: {
   86: "meer dan 20 minuten",
   90: "#{n} gekraakt",
   92: "Lukt het jou ook?",
-  93: "Deel je resultaat",
   94: "Deel link…",
   95: "Deel afbeelding…",
   96: "Kopieer tekst",

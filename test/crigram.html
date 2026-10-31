@@ -1089,6 +1089,7 @@ nl: {
   288: "Je speelt in {app}. Wat je hier oplost, blijft in die app, en van hieruit kun je CRIGram niet installeren.",
   289: "Zo open je CRIGram in {browser}",
   290: "Deel deze puzzel",
+  291: "Je <b>reeks van 1 week</b> staat op het spel: de puzzel van deze week staat open tot maandag 06:00 (Brusselse tijd{local}).",
 },
 // </texts>
 };
@@ -1651,7 +1652,8 @@ function pickNotice(prevVisit) {
   const wd = weekday(brusselsDate(now));
   if (last && !isSolved(last) && now < releaseTime(last) + 7 * DAY && (wd === 5 || wd === 6 || wd === 0)) {
     const st = streaks();
-    if (st.current >= 1) return t(215, "Your <b>{n}-week streak</b> is on the line: this week's puzzle is open until Monday 06:00 (Brussels time{local}).", { n: st.current, local: localTimeSuffix() });
+    if (st.current === 1) return t(291, "Your <b>1-week streak</b> is on the line: this week's puzzle is open until Monday 06:00 (Brussels time{local}).", { local: localTimeSuffix() });
+    if (st.current > 1) return t(215, "Your <b>{n}-week streak</b> is on the line: this week's puzzle is open until Monday 06:00 (Brussels time{local}).", { n: st.current, local: localTimeSuffix() });
   }
   return null;
 }
@@ -2666,6 +2668,8 @@ function recordSolve() {
     ? { ...prev, best: Math.min(prev.best, time), solves: (prev.solves || 1) + 1, last: now }
     : { first: now, last: now, time, hints, best: time, solves: 1 };
   saveStats();
+  // a notice picked at the start (streak warning, new puzzle) may no longer be true after this solve
+  if (!isPractice() && !$("notice").hidden) showNotice(noticeVisit);
   if (prev) return;   // only the first solve counts in the shared statistics
   if (isPractice()) {
     const pm = Math.floor(time / 60);

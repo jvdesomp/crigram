@@ -101,6 +101,8 @@
   .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: -2px; }
   .tags .tag { margin-left: 0; }
   .tag.special { background: #a54499; color: #fff; }
+  .tag.challenge { background: #ef4035; color: #fff; }
+  .star-challenge { color: #ef4035; }
   .tag.ribbon { position: absolute; top: 16px; left: 16px; margin: 0; font-size: 12px; font-weight: 600; padding: 2px 9px; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .tag.milestone { background: #fcb033; color: #1b2233; }
   .tag.ribbon + .tag.ribbon { top: 42px; }
@@ -455,6 +457,15 @@
     <div class="sheet-close"><button class="link" data-close data-t="98">Close</button></div>
   </div>
 </div>
+<div class="sheet-bg" id="noteBg">
+  <div class="sheet">
+    <h2 id="noteTitle"></h2>
+    <p class="sub" id="noteChallenge" data-t="295">This puzzle is much harder than the usual ones: think of a quiet evening rather than a coffee break. Your progress is saved, so you can stop and carry on later, and the bulb helps when you are stuck. It is a bonus: it never counts for your streak, and never breaks it.</p>
+    <p class="sub" id="noteText"></p>
+    <div class="actions"><button class="btn primary" id="noteStart" data-close data-t="297">Start</button></div>
+    <div class="sheet-close"><button class="link" id="noteLater" data-t="298">Later</button></div>
+  </div>
+</div>
 <div class="sheet-bg" id="reminderBg">
   <div class="sheet">
     <h2 data-t="121">Weekly reminder</h2>
@@ -486,8 +497,7 @@
       <li data-t="137">Every puzzle can be solved by logic alone. No guessing needed!</li>
       <li data-t="138">Cells too small? Use <b>+</b> and <b>−</b> to zoom. Drag along the clue numbers (or with two fingers) to move around; the mini-map in the corner shows where you are.</li>
       <li data-t="139">Stuck? The bulb gives you a hint.</li>
-      <li data-t="169">Stars show how hard a puzzle is: ★☆☆☆ <b>easy</b> (a typical player needs less than 5 minutes), ★★☆☆ <b>medium</b> (5 to 10 minutes), ★★★☆ <b>hard</b> (10 to 20 minutes) and ★★★★ <b>expert</b> (more than 20 minutes). There is no clock while you play: take your time. You see your time once you have solved the puzzle.</li>
-      <li data-t="140">A new puzzle appears every Monday at 06:00 (Brussels time<span class="localTime"></span>), or occasionally on special dates. Solve the Monday puzzle within the week to keep your streak going; special puzzles are a bonus and never break your streak. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
+      <li data-t="169">Stars show how hard a puzzle is: ★☆☆☆ <b>easy</b> (a typical player needs less than 5 minutes), ★★☆☆ <b>medium</b> (5 to 10 minutes), ★★★☆ <b>hard</b> (10 to 20 minutes) and ★★★★ <b>expert</b> (more than 20 minutes). There is no clock while you play: take your time. You see your time once you have solved the puzzle.</li>      <li data-t="140">A new puzzle appears every Monday at 06:00 (Brussels time<span class="localTime"></span>), or occasionally on special dates. Solve the Monday puzzle within the week to keep your streak going; special puzzles are a bonus and never break your streak. Tap <b>Weekly reminder</b> to put a Monday reminder in your calendar.</li>
     </ul>
     <div class="actions" id="howPracticeRow" hidden style="margin:4px 0 10px"><button class="btn" id="howPracticeBtn" data-t="150">Try the practice puzzle</button></div>
     <p class="sub" id="privacyNote" hidden data-t="141">CRIGram counts anonymous plays to see which puzzles are popular. No cookies, no personal data.</p>
@@ -1090,6 +1100,14 @@ nl: {
   289: "Zo open je CRIGram in {browser}",
   290: "Deel deze puzzel",
   291: "Je <b>reeks van 1 week</b> staat op het spel: de puzzel van deze week staat open tot maandag 06:00 (Brusselse tijd{local}).",
+  292: "Volgende puzzel: een <b>uitdaging</b>, <b>{date}</b> · {when}",
+  293: "uitdaging",
+  294: "Een uitdaging",
+  295: "Deze puzzel is veel moeilijker dan de gewone: denk eerder aan een rustige avond dan aan een koffiepauze. Je voortgang wordt bewaard, dus je kunt stoppen en later verdergaan, en het lampje helpt als je vastzit. Het is een bonus: deze puzzel telt nooit mee voor je reeks en breekt ze ook nooit.",
+  296: "Voor je begint",
+  297: "Begin",
+  298: "Later",
+  299: "uitdaging: veel moeilijker dan expert",
 },
 // </texts>
 };
@@ -1340,11 +1358,13 @@ function fmtTime(s) {
   return m + ":" + String(r).padStart(2, "0");
 }
 function starText(p) {
+  if (p.challenge) return '★★★★<span class="star-challenge">★</span>';
   const n = p.difficulty && p.difficulty.stars ? p.difficulty.stars : 0;
   return n ? "★".repeat(n) + "☆".repeat(4 - n) : "";
 }
 // the stars carry the level (How to play explains them); the level word stays as a tooltip and for screen readers
-const stars = p => (p.difficulty && p.difficulty.label ? `<span title="${levelName(p.difficulty)}" aria-label="${levelName(p.difficulty)}">${starText(p)}</span>` : starText(p));
+const starLabel = p => p.challenge ? t(299, "challenge: much harder than expert") : levelName(p.difficulty);
+const stars = p => (p.challenge || p.difficulty && p.difficulty.label ? `<span title="${starLabel(p)}" aria-label="${starLabel(p)}">${starText(p)}</span>` : starText(p));
 const sizeStars = p => `${p.width} × ${p.height}` + (p.difficulty ? ` · ${stars(p)}` : "");
 function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 // numbers: plain up to 9999, from 10 000 a (no-break) space every three digits, in every language;
@@ -1513,7 +1533,13 @@ function renderHome() {
   renderAlbumLine();
   const nu = $("nextUp");
   nu.hidden = !nextRelease || !puzzles.length;
-  if (nextRelease) { const w = whenText(nextRelease); nu.innerHTML = t(4, "Next puzzle: <b>{date}</b> · {when}", { date: w.abs, when: w.rel }); }
+  if (nextRelease) {
+    const w = whenText(nextRelease);
+    // a challenge is announced ahead, so players can keep some time free for it
+    nu.innerHTML = allPuzzles.some(p => p.challenge && releaseTime(p) === nextRelease)
+      ? t(292, "Next puzzle: a <b>challenge</b>, <b>{date}</b> · {when}", { date: w.abs, when: w.rel })
+      : t(4, "Next puzzle: <b>{date}</b> · {when}", { date: w.abs, when: w.rel });
+  }
   const now = Date.now();
   const shown = homeSelection();
   $("moreLink").hidden = shown.length >= puzzles.length;
@@ -1539,7 +1565,8 @@ function renderHome() {
         : prog && prog.cells && /[12]/.test(prog.cells) ? `<span class="tag">${t(13, "in progress")}</span>` : "");
     // the badges on a row of their own, left-aligned with the size and stars
     b.insertAdjacentHTML("beforeend", `<b>${escapeHtml(name)}</b><small>${sizeStars(p)}</small>` + (status ? `<span class="tags">${status}</span>` : ""));
-    if (isSpecial(p)) b.insertAdjacentHTML("beforeend", `<span class="tag special ribbon">${t(14, "special")}</span>`);
+    if (p.challenge) b.insertAdjacentHTML("beforeend", `<span class="tag challenge ribbon">${t(293, "challenge")}</span>`);
+    else if (isSpecial(p)) b.insertAdjacentHTML("beforeend", `<span class="tag special ribbon">${t(14, "special")}</span>`);
     if (MILESTONES.includes(i + 1)) b.insertAdjacentHTML("beforeend", `<span class="tag milestone ribbon">${t(167, "🎉 {n}th puzzle", { n: i + 1 })}</span>`);
     b.onclick = () => openPuzzle(i);
     list.appendChild(b);
@@ -1884,7 +1911,31 @@ function openPuzzle(i) {
   else window.scrollTo(0, 0);
   clearInterval(timerId);
   // no visible clock while solving: the time is still measured and shown after solving
+  if (!solved && i >= 0) showPuzzleNote(base, prog);
 }
+// a challenge, or a puzzle with a note from the maker, gets a short sheet before the first move;
+// once the player taps Start it does not come back on this device
+const NOTES_SEEN_KEY = "crigram.notesSeen" + KEY_SUFFIX;
+function showPuzzleNote(p, prog) {
+  const note = p.note && (p.note[lang] || p.note.en);
+  if (!p.challenge && !note) return;
+  if (readJSON(NOTES_SEEN_KEY, {})[p.id] || (prog.cells && /[12]/.test(prog.cells))) return;
+  $("noteTitle").textContent = p.challenge ? t(294, "A challenge") : t(296, "Before you start");
+  $("noteChallenge").hidden = !p.challenge;
+  $("noteText").textContent = note || "";
+  $("noteText").hidden = !note;
+  $("noteBg").dataset.id = p.id;
+  $("noteBg").classList.add("show");
+  track("note/" + (p.challenge ? "challenge" : "note"), "Puzzle note shown");
+}
+// Start (or a tap next to the sheet) means read; Later goes back home and shows the note again next time
+$("noteBg").addEventListener("click", e => {
+  if (e.target !== $("noteBg") && e.target !== $("noteStart")) return;
+  const seen = readJSON(NOTES_SEEN_KEY, {});
+  seen[$("noteBg").dataset.id] = 1;
+  writeJSON(NOTES_SEEN_KEY, seen);
+});
+$("noteLater").onclick = () => { $("noteBg").classList.remove("show"); leavePuzzle(); };
 // the timer measures active playing time: it stops when the window loses focus,
 // and a long break between two moves only counts for one minute
 function currentTime() { return elapsed + (startedAt ? Math.min(Date.now() - lastAct, IDLE_MS) / 1000 : 0); }
@@ -3015,8 +3066,9 @@ async function showCommunity(p, myTime, myHints) {
 
 // ---------- personal stats page ----------
 // weekly streak: weekly puzzles in a row that were solved within 7 days of their release
-// a puzzle released on another day than Monday is a special (e.g. an awareness day): a bonus outside the streak
-function isSpecial(p) { return !!(p.release && /^\d{4}-\d{2}-\d{2}$/.test(p.release) && weekday(p.release) !== 1); }
+// a puzzle released on another day than Monday is a special (e.g. an awareness day): a bonus outside the streak;
+// a challenge is always a bonus, even on a Monday
+function isSpecial(p) { return !!(p.release && /^\d{4}-\d{2}-\d{2}$/.test(p.release) && (weekday(p.release) !== 1 || p.challenge)); }
 function streaks() {
   const now = Date.now(), WEEK = 6048e5;
   const weekly = puzzles.map(p => ({ p, t: releaseTime(p) })).filter(o => o.t !== null && o.t <= now && !isSpecial(o.p));

@@ -1,7 +1,7 @@
 {
  "format": "crigram-game",
  "version": 3,
- "published": "2026-11-01T16:33:56.368Z",
+ "published": "2026-11-03T10:51:05.925Z",
  "puzzles": [
   {
    "id": "p1acwx1r",
@@ -2035,6 +2035,11 @@
   }
  ],
  "milestones": [
+  {
+   "date": "2026-11-03",
+   "en": "New verb “to bingegram” (bingegrammed, bingegrammed): The irresistible urge to start another CRIGram immediately after solving one.",
+   "nl": "Nieuw werkwoord \"bingegrammen\" (bingegramde, gebingegramd): Het onweerstaanbare verlangen om na het oplossen van een CRIGram meteen aan de volgende te beginnen."
+  },
   {
    "date": "2026-10-30",
    "en": "500 puzzles solved, at an average of 7.3 minutes per puzzle. You are amazing!",

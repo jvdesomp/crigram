@@ -640,12 +640,46 @@ function propagate(st, W, H, rows, cols) {
   }
   return true;
 }
+// ---------- tip search (for the estimated solving time) ----------
+// Solves like a player who follows the bulb's tips: each step takes the tip the game would give (easiestLine) and fills
+// the cells it proves. Search = sum over the tips of (rows + columns) / lines that give a tip at that moment (lines that
+// reveal a cell to fill, if any). Runs on its own puzzle and grid, then puts the current ones back. A line that did not
+// change keeps its explanation, which makes this about ten times faster than explaining every line again at every step.
+function tipSearch(W, H, rows, cols) {
+  const keep = [cur, cells];
+  cur = { width: W, height: H, rows, cols };
+  cells = new Uint8Array(W * H);
+  try {
+    const known = new Array(W + H), cellSearch = new Float32Array(W * H).fill(-1);
+    const explain = idx => (known[idx] !== undefined ? known[idx] : (known[idx] = explainLine(idx)));
+    let search = 0, steps = 0;
+    for (;;) {
+      let useful = 0, fill = 0;
+      for (let idx = 0; idx < W + H; idx++) { const ex = explain(idx); if (ex) { useful++; if (ex.fills) fill++; } }
+      const best = easiestLine(explain);
+      if (!best) break;
+      const cost = (W + H) / (fill || useful);
+      search += cost; steps++;
+      known[best.idx] = undefined;
+      for (const [x, val] of best.set) {
+        const i = best.at[x];
+        if (cells[i] === 0) { cells[i] = val ? 1 : 2; cellSearch[i] = cost; known[best.idx < H ? H + x : x] = undefined; }
+      }
+    }
+    return { search, steps, cellSearch, solved: !cells.includes(0) };
+  } finally {
+    [cur, cells] = keep;
+  }
+}
 // ---------- estimated solving time ----------
-// Refitted on 18 October 2026 (least squares, no intercept) on the median of the exact solve minutes of puzzles 1 to 4
-// (barcodes 3.5, DC vaccine 8.5, CRIG walk 11.5, Dag tegen Kanker 6.5 min; 13 to 42 solves each). Before: 0.057 and 0.32.
-// Refit again once 5 puzzles have about 20 solves each, in the game, the maker and the dashboard.
-const TIME_PER_SEARCH = 0.033;   // minutes per row or column a player looks at before finding one that gives progress
-const TIME_PER_BIT = 0.29;       // minutes per bit of reasoning in rows that still allow several fillings
+// Tips model since 3 November 2026 (backlog #13; shadow-tested in the dashboard from 25 October 2026): fitted (least squares,
+// no intercept) on the median of the exact solve minutes of puzzles 1 to 7 (barcodes 3.5, DC vaccine 7.5, CRIG walk 12.5,
+// Dag tegen Kanker 5.5, EV cargo 5.5, 10 years of CRIG 12, patient-reported outcomes 3 min; 28 to 148 solves each).
+// Leave-one-out error 1.5 min. The previous model (0.033 min per line searched for the line with the most new cells
+// + 0.29 min per bit, refitted 18 October 2026) missed by 2.8 min and gave 10 years of CRIG 7.6 min instead of 12.
+// Same block in the game, the maker and the dashboard.
+const TIME_PER_LINE = 0.0083;   // minutes per row or column a player looks at before finding one where a tip applies
+const TIME_PER_BIT = 0.21;      // minutes per bit of reasoning in rows that still allow several fillings
 const DIFFICULTY_LEVELS = [[5, "easy", 1], [10, "medium", 2], [20, "hard", 3], [Infinity, "expert", 4]];
 function estimateDifficulty(W, H, rows, cols) {
   const lineOf = (st, idx) => {
@@ -656,47 +690,35 @@ function estimateDifficulty(W, H, rows, cols) {
   };
   const cell = (idx, x) => (idx < H ? idx * W + x : x * W + idx - H);
   const clue = idx => (idx < H ? rows[idx] : cols[idx - H]);
-  // 1. search: a player takes the row or column that gives the most new cells; when only few lines give
-  //    progress, finding one means looking at many: on average (rows + columns) / useful lines
-  let st = new Int8Array(W * H).fill(-1), search = 0, steps = 0;
-  const cellSearch = new Float32Array(W * H).fill(-1);
-  for (;;) {
-    let best = null, useful = 0;
-    for (let idx = 0; idx < W + H; idx++) {
-      const line = lineOf(st, idx), out = solveLine(line, clue(idx));
-      if (!out) return null;
-      let g = 0;
-      for (let x = 0; x < line.length; x++) if (out.res[x] !== line[x]) g++;
-      if (g) { useful++; if (!best || g > best.g) best = { idx, out, g }; }
-    }
-    if (!best) break;
-    const cost = (W + H) / useful;
-    search += cost; steps++;
-    const n = best.idx < H ? W : H;
-    for (let x = 0; x < n; x++) {
-      const i = cell(best.idx, x);
-      if (st[i] === -1 && best.out.res[x] !== -1) { st[i] = best.out.res[x]; cellSearch[i] = cost; }
-    }
-  }
-  const solved = !st.includes(-1);
+  // 1. search: a player follows the tips; when only few lines give a tip, finding one means looking at many
+  const { search, steps, cellSearch, solved } = tipSearch(W, H, rows, cols);
   // 2. reasoning: a player takes the line with the fewest possible fillings; a line with k fillings costs log2(k) bits
-  st = new Int8Array(W * H).fill(-1);
+  //    (a line that did not change keeps its result)
+  const st = new Int8Array(W * H).fill(-1), known = new Array(W + H);
   let bits = 0;
   for (;;) {
     let best = null;
     for (let idx = 0; idx < W + H; idx++) {
-      const line = lineOf(st, idx), out = solveLine(line, clue(idx));
-      if (!out) return null;
-      let g = 0;
-      for (let x = 0; x < line.length; x++) if (out.res[x] !== line[x]) g++;
+      if (!known[idx]) {
+        const line = lineOf(st, idx), out = solveLine(line, clue(idx));
+        if (!out) return null;
+        let g = 0;
+        for (let x = 0; x < line.length; x++) if (out.res[x] !== line[x]) g++;
+        known[idx] = { out, g };
+      }
+      const { out, g } = known[idx];
       if (g && (!best || out.count < best.out.count || (out.count === best.out.count && g > best.g))) best = { idx, out, g };
     }
     if (!best) break;
     bits += Math.log2(best.out.count);
     const n = best.idx < H ? W : H;
-    for (let x = 0; x < n; x++) if (best.out.res[x] !== -1) st[cell(best.idx, x)] = best.out.res[x];
+    for (let x = 0; x < n; x++) {
+      const i = cell(best.idx, x);
+      if (st[i] === -1 && best.out.res[x] !== -1) { st[i] = best.out.res[x]; known[best.idx < H ? H + x : x] = null; }
+    }
+    known[best.idx] = null;
   }
-  const minutes = TIME_PER_SEARCH * search + TIME_PER_BIT * bits;
+  const minutes = TIME_PER_LINE * search + TIME_PER_BIT * bits;
   const [, label, stars] = DIFFICULTY_LEVELS.find(l => minutes < l[0]);
   return { minutes, label, stars, search, bits, steps, cellSearch, solved };
 }
@@ -2549,11 +2571,12 @@ function explainLine(idx) {
   return best;
 }
 // the line with the easiest explanation that yields a new cell, like a player would: { idx, at, ...explainLine } or null
-function easiestLine() {
+// (tipSearch passes its own explain, which remembers the explanations of lines that did not change)
+function easiestLine(explain = explainLine) {
   const W = cur.width, H = cur.height;
   let best = null;
   for (let idx = 0; idx < W + H; idx++) {
-    const ex = explainLine(idx);
+    const ex = explain(idx);
     if (!ex) continue;
     // crosses are not needed to win, so prefer lines that reveal a cell to fill; then the easiest explanation,
     // the one that proves the most cells (fewer tips to finish a puzzle) and the line with the fewest solutions
